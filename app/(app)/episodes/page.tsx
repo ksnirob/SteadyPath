@@ -10,12 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { type EpisodeInput, episodeSchema } from "@/lib/validation";
 
+function formatLocalDateTimeInput(date = new Date()) {
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 export default function EpisodesPage() {
   const [message, setMessage] = useState("");
   const form = useForm<EpisodeInput>({
     resolver: zodResolver(episodeSchema),
     defaultValues: {
-      occurredAt: new Date().toISOString().slice(0, 16),
+      occurredAt: formatLocalDateTimeInput(),
       anxietyLevel: 5,
       resistedCompulsion: false,
       mood: "NEUTRAL"
@@ -25,7 +30,7 @@ export default function EpisodesPage() {
   function onSubmit(data: EpisodeInput) {
     localStorage.setItem("latest-episode", JSON.stringify(data));
     setMessage("Episode saved locally.");
-    form.reset({ ...data, intrusiveThought: "", notes: "" });
+    form.reset({ ...data, occurredAt: formatLocalDateTimeInput(), intrusiveThought: "", notes: "" });
   }
 
   return (
