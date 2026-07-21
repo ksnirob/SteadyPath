@@ -15,9 +15,13 @@ export default function CalendarPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-7 gap-2 text-center text-sm">
-            {["S", "M", "T", "W", "T", "F", "S"].map((day) => <div key={day} className="py-2 font-medium text-muted-foreground">{day}</div>)}
-            {days.map((day) => (
-              <div key={day} className="aspect-square rounded-md border p-2 text-left">
+            {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+              <div key={`${day}-${index}`} className="py-2 font-medium text-muted-foreground">
+                {day}
+              </div>
+            ))}
+            {days.map((day, index) => (
+              <div key={`calendar-cell-${index}`} className="aspect-square rounded-md border p-2 text-left">
                 <span className="text-sm font-medium">{day <= 31 ? day : ""}</span>
                 {day % 3 === 0 && day <= 31 ? <div className="mt-2 h-2 rounded-full bg-primary" /> : null}
               </div>
