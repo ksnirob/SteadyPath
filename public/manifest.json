@@ -1,0 +1,18 @@
+{
+  "name": "Steady Path",
+  "short_name": "Steady",
+  "description": "Private OCD recovery tracking for ERP, symptoms, moods, triggers, and progress.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f8f6f1",
+  "theme_color": "#24756f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
