@@ -1,9 +1,20 @@
+"use client";
+
 import { MiniLineChart } from "@/components/charts/mini-line-chart";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { triggers, weeklyAnxiety } from "@/lib/mock-data";
+import { getRecoveryStats, triggerSummary, useRecoveryData, weeklyTrend } from "@/lib/recovery-store";
 
 export default function InsightsPage() {
+  const { state } = useRecoveryData();
+  const trend = weeklyTrend(state);
+  const stats = getRecoveryStats(state);
+  const triggers = triggerSummary(state);
+  const recoveryScore = Math.max(
+    0,
+    Math.min(100, Math.round(50 + stats.resistedRate * 0.25 + stats.completedErp * 5 - stats.averageAnxiety * 2))
+  );
+
   return (
     <div className="space-y-6">
       <header>
@@ -16,7 +27,7 @@ export default function InsightsPage() {
             <CardTitle>Weekly anxiety</CardTitle>
           </CardHeader>
           <CardContent>
-            <MiniLineChart data={weeklyAnxiety} dataKey="anxiety" />
+            <MiniLineChart data={trend} dataKey="anxiety" />
           </CardContent>
         </Card>
         <Card>
@@ -24,15 +35,16 @@ export default function InsightsPage() {
             <CardTitle>Mood trend</CardTitle>
           </CardHeader>
           <CardContent>
-            <MiniLineChart data={weeklyAnxiety} dataKey="mood" color="hsl(var(--accent))" />
+            <MiniLineChart data={trend} dataKey="mood" color="hsl(var(--accent))" />
           </CardContent>
         </Card>
       </section>
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-4">
         {[
-          ["Recovery score", "78", "+9 this month"],
-          ["Best streak", "21 days", "Check-ins"],
-          ["Average anxiety", "5.4/10", "-1.2 vs last month"]
+          ["Recovery score", `${recoveryScore}`, "From ERP, resistance, anxiety"],
+          ["Current streak", `${stats.currentStreak}`, "Daily check-ins"],
+          ["Average anxiety", `${stats.averageAnxiety.toFixed(1)}/10`, "Across logged episodes"],
+          ["Resistance rate", `${stats.resistedRate}%`, "Compulsions resisted"]
         ].map(([title, value, detail]) => (
           <Card key={title}>
             <CardContent className="p-4">
@@ -48,15 +60,20 @@ export default function InsightsPage() {
           <CardTitle>Trigger frequency</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {triggers.map((trigger) => (
-            <div key={trigger.label} className="rounded-md border p-4">
-              <div className="flex items-center justify-between">
-                <p className="font-medium">{trigger.label}</p>
-                <Badge>{trigger.change}</Badge>
+          {triggers.length ? (
+            triggers.map((trigger) => (
+              <div key={trigger.label} className="rounded-md border p-4">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">{trigger.label}</p>
+                  <Badge>{trigger.averageIntensity}/10</Badge>
+                </div>
+                <p className="mt-3 text-2xl font-semibold">{trigger.count}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Logged event(s)</p>
               </div>
-              <p className="mt-3 text-2xl font-semibold">{trigger.count}</p>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">Log episodes or triggers to build frequency insights.</p>
+          )}
         </CardContent>
       </Card>
     </div>

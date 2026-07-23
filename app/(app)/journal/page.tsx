@@ -2,17 +2,20 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useRecoveryData } from "@/lib/recovery-store";
 import { type JournalInput, journalSchema } from "@/lib/validation";
 
 const storageKey = "journal-draft";
 
 export default function JournalPage() {
+  const { actions } = useRecoveryData();
+  const [message, setMessage] = useState("");
   const form = useForm<JournalInput>({
     resolver: zodResolver(journalSchema),
     defaultValues: { mood: "NEUTRAL", gratitude: "", wins: "", challenges: "", body: "" }
@@ -29,7 +32,9 @@ export default function JournalPage() {
   }, [form]);
 
   function onSubmit(data: JournalInput) {
-    localStorage.setItem("latest-journal", JSON.stringify({ ...data, syncedAt: navigator.onLine ? new Date().toISOString() : null }));
+    actions.addJournal(data);
+    setMessage("Journal saved. Dashboard and calendar updated.");
+    localStorage.removeItem(storageKey);
   }
 
   return (
@@ -38,6 +43,11 @@ export default function JournalPage() {
         <p className="text-sm font-medium text-muted-foreground">Autosaved offline</p>
         <h1 className="text-2xl font-semibold">Daily journal</h1>
       </header>
+      {message ? (
+        <div className="rounded-md border bg-card p-3 text-sm font-medium" role="status">
+          {message}
+        </div>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Reflection</CardTitle>

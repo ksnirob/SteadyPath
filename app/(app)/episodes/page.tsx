@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useRecoveryData } from "@/lib/recovery-store";
 import { type EpisodeInput, episodeSchema } from "@/lib/validation";
 
 function formatLocalDateTimeInput(date = new Date()) {
@@ -17,6 +18,7 @@ function formatLocalDateTimeInput(date = new Date()) {
 
 export default function EpisodesPage() {
   const [message, setMessage] = useState("");
+  const { actions } = useRecoveryData();
   const form = useForm<EpisodeInput>({
     resolver: zodResolver(episodeSchema),
     defaultValues: {
@@ -28,9 +30,22 @@ export default function EpisodesPage() {
   });
 
   function onSubmit(data: EpisodeInput) {
-    localStorage.setItem("latest-episode", JSON.stringify(data));
-    setMessage("Episode saved locally.");
-    form.reset({ ...data, occurredAt: formatLocalDateTimeInput(), intrusiveThought: "", notes: "" });
+    actions.addEpisode({
+      ...data,
+      occurredAt: new Date(data.occurredAt).toISOString(),
+      durationMinutes: data.durationMinutes || undefined
+    });
+    setMessage("Episode saved. Dashboard, triggers, insights, and calendar were updated.");
+    form.reset({
+      occurredAt: formatLocalDateTimeInput(),
+      anxietyLevel: 5,
+      resistedCompulsion: false,
+      mood: "NEUTRAL",
+      intrusiveThought: "",
+      trigger: "",
+      compulsion: "",
+      notes: ""
+    });
   }
 
   return (
@@ -49,6 +64,9 @@ export default function EpisodesPage() {
           <CardTitle>Episode details</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+            An episode is one OCD loop event: intrusive thought, anxiety, urge to perform a compulsion, and either doing or resisting that compulsion.
+          </div>
           <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
             <label className="grid gap-2 text-sm font-medium">
               Date and time

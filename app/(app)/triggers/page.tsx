@@ -7,35 +7,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { triggers as initialTriggers } from "@/lib/mock-data";
-
-type TriggerItem = {
-  label: string;
-  count: number;
-  change: string;
-  context?: string;
-};
+import { formatDateLabel, triggerSummary, useRecoveryData } from "@/lib/recovery-store";
 
 export default function TriggersPage() {
-  const [triggers, setTriggers] = useState<TriggerItem[]>(initialTriggers);
+  const { state, actions } = useRecoveryData();
   const [showForm, setShowForm] = useState(false);
   const [message, setMessage] = useState("");
+  const summary = triggerSummary(state);
 
   function addTrigger(formData: FormData) {
     const label = String(formData.get("label") || "").trim();
     if (!label) return;
 
-    setTriggers((current) => [
-      {
-        label,
-        count: Number(formData.get("intensity") || 1),
-        change: "New",
-        context: String(formData.get("context") || "")
-      },
-      ...current
-    ]);
+    actions.addTrigger({
+      label,
+      intensity: Number(formData.get("intensity") || 5),
+      context: String(formData.get("context") || "").trim()
+    });
     setShowForm(false);
-    setMessage("Trigger added.");
+    setMessage("Trigger added. Dashboard and Insights updated.");
   }
 
   return (
@@ -91,22 +81,39 @@ export default function TriggersPage() {
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2">
-        {triggers.map((trigger) => (
+        {summary.map((trigger) => (
           <Card key={trigger.label}>
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
                 <CardTitle>{trigger.label}</CardTitle>
-                <Badge>{trigger.change}</Badge>
+                <Badge>{trigger.count} logged</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold">{trigger.count}</p>
-              <p className="mt-1 text-sm text-muted-foreground">Logged in the last 30 days</p>
-              {trigger.context ? <p className="mt-3 text-sm text-muted-foreground">{trigger.context}</p> : null}
+              <p className="text-3xl font-semibold">{trigger.averageIntensity}/10</p>
+              <p className="mt-1 text-sm text-muted-foreground">Average intensity from trigger logs and episodes</p>
             </CardContent>
           </Card>
         ))}
       </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent trigger events</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {state.triggers.slice(0, 8).map((trigger) => (
+            <div key={trigger.id} className="rounded-md border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium">{trigger.label}</p>
+                <Badge>{trigger.intensity}/10</Badge>
+              </div>
+              {trigger.context ? <p className="mt-1 text-sm text-muted-foreground">{trigger.context}</p> : null}
+              <p className="mt-2 text-xs text-muted-foreground">{formatDateLabel(trigger.createdAt)}</p>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }
