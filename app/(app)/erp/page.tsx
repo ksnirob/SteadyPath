@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Pause, Play, Plus, ShieldCheck, X } from "lucide-react";
+import { Clock, Keyboard, Pause, Play, Plus, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,16 @@ type ActiveSession = {
   startedAt: number;
   accumulatedSeconds: number;
   paused: boolean;
+};
+
+const magicalThinkingTypingPlan = {
+  title: "Type D once without retyping",
+  fearedOutcome: "Seeing or typing the letter D may trigger the thought dementia, and OCD may demand certainty that it means nothing.",
+  responsePrevention:
+    "Type the letter or D-word one time, do not delete/retype it for a good feeling, do not replace the word, do not check symptoms, and continue the sentence while allowing uncertainty.",
+  difficulty: 4,
+  notes:
+    "Start with 5 minutes. Type simple D-words once: day, door, done, dream. Then practice harder words or phrases like dementia, maybe I have dementia maybe I do not. The win is preventing the ritual, not making the thought disappear."
 };
 
 export default function ErpPage() {
@@ -92,6 +102,28 @@ export default function ErpPage() {
     });
     setShowForm(false);
     toast.success("Exposure added", "It is now in your ERP hierarchy.");
+  }
+
+  function addMagicalThinkingPlan() {
+    const alreadyAdded = state.erpExercises.some((exercise) => exercise.title === magicalThinkingTypingPlan.title);
+
+    if (alreadyAdded) {
+      toast.info("Plan already added", "You can start it from your ERP hierarchy.");
+      return;
+    }
+
+    actions.addTrigger({
+      label: "Magical thinking with letter D",
+      intensity: 6,
+      context: "Typing D or D-words triggers dementia fear and the urge to retype until it feels right."
+    });
+
+    actions.addErpExercise({
+      ...magicalThinkingTypingPlan,
+      hierarchyRank: state.erpExercises.length + 1
+    });
+
+    toast.success("Action plan added", "Trigger and ERP hierarchy updated.");
   }
 
   function startExercise(exerciseId: string, title: string) {
@@ -269,6 +301,38 @@ export default function ErpPage() {
           </Card>
         </div>
       ) : null}
+
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-primary">
+                <Keyboard className="h-4 w-4" aria-hidden />
+                Suggested plan for magical thinking OCD
+              </p>
+              <CardTitle className="mt-2">Typing D without retyping</CardTitle>
+            </div>
+            <Button onClick={addMagicalThinkingPlan}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Add action plan
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm md:grid-cols-3">
+          <div className="rounded-md border bg-card p-3">
+            <p className="font-medium">Trigger</p>
+            <p className="mt-1 text-muted-foreground">Typing D or D-words brings the thought dementia.</p>
+          </div>
+          <div className="rounded-md border bg-card p-3">
+            <p className="font-medium">Exposure</p>
+            <p className="mt-1 text-muted-foreground">Type D once, then type D-words once, and leave them unchanged.</p>
+          </div>
+          <div className="rounded-md border bg-card p-3">
+            <p className="font-medium">Response prevention</p>
+            <p className="mt-1 text-muted-foreground">No retyping, replacing, checking, symptom searching, or waiting for a good thought.</p>
+          </div>
+        </CardContent>
+      </Card>
 
       <section className="grid gap-4 lg:grid-cols-3">
         {state.erpExercises.map((exercise) => (
