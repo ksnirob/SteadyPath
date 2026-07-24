@@ -1,16 +1,17 @@
 "use client";
 
 import { ClipboardCheck } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoPopover } from "@/components/ui/info-popover";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 import { type Mood, useRecoveryData } from "@/lib/recovery-store";
 
 export default function CheckInPage() {
   const { actions } = useRecoveryData();
-  const [message, setMessage] = useState("");
+  const toast = useToast();
 
   function saveCheckIn(formData: FormData) {
     actions.addCheckIn({
@@ -20,23 +21,28 @@ export default function CheckInPage() {
       mood: String(formData.get("mood") || "NEUTRAL") as Mood,
       notes: String(formData.get("notes") || "")
     });
-    setMessage("Check-in saved. Dashboard, streak, calendar, and insights updated.");
+    toast.success("Check-in saved", "Dashboard, streak, calendar, and insights updated.");
   }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header>
         <p className="text-sm font-medium text-muted-foreground">Morning or evening check-in</p>
-        <h1 className="text-2xl font-semibold">Today's check-in</h1>
-      </header>
-      {message ? (
-        <div className="rounded-md border bg-card p-3 text-sm font-medium" role="status">
-          {message}
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold">Today's check-in</h1>
+          <InfoPopover label="What check-in means" title="Daily check-in">
+            A check-in is a quick snapshot of your day. Example: anxiety 6, mood neutral, sleep 7 hours, energy 4,
+            notes like "checking was stronger after poor sleep." It updates Dashboard, Calendar, Insights, and streaks.
+          </InfoPopover>
         </div>
-      ) : null}
+      </header>
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>How are you doing?</CardTitle>
+          <InfoPopover label="How to fill check-in" title="How to fill this">
+            Use your best estimate. The goal is pattern tracking, not perfect accuracy. Example: if anxiety was mostly
+            manageable but spiked once, you might enter 4 or 5.
+          </InfoPopover>
         </CardHeader>
         <CardContent>
           <form action={saveCheckIn} className="grid gap-4">

@@ -24,6 +24,7 @@ export function Button({ className, variant = "primary", size = "md", ...props }
     <button
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-md font-medium transition disabled:pointer-events-none disabled:opacity-50",
+        "active:translate-y-px",
         variants[variant],
         sizes[size],
         className

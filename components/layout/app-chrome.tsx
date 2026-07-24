@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HeartPulse, MoreHorizontal, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { navItems } from "@/components/layout/nav-items";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,17 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   const mobileItems = navItems.slice(0, 4);
   const moreItems = navItems.slice(4);
   const moreActive = moreItems.some((item) => item.href === pathname);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMoreOpen(false);
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [moreOpen]);
 
   return (
     <div className="min-h-screen">
@@ -35,6 +46,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                   "flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
                   active && "bg-muted text-foreground"
                 )}
+                aria-current={active ? "page" : undefined}
               >
                 <Icon className="h-4 w-4" aria-hidden />
                 {item.label}
@@ -43,14 +55,16 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
           })}
         </nav>
       </aside>
-      <main className="pb-28 lg:ml-64 lg:pb-0">
+      <main className="pb-[calc(6rem+env(safe-area-inset-bottom))] lg:ml-64 lg:pb-0">
         <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">{children}</div>
       </main>
       {moreOpen ? (
         <div className="fixed inset-0 z-40 bg-background/75 backdrop-blur-sm lg:hidden" onClick={() => setMoreOpen(false)}>
           <div
             id="mobile-more-menu"
-            className="absolute inset-x-3 bottom-20 rounded-lg border bg-card p-3 shadow-lg"
+            className="absolute inset-x-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] max-h-[min(24rem,calc(100dvh-8rem))] overflow-y-auto rounded-lg border bg-card p-3 shadow-lg"
+            role="dialog"
+            aria-label="More navigation"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between px-1">
@@ -77,6 +91,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                       "flex min-h-12 items-center gap-3 rounded-md border px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
                       active && "bg-muted text-foreground"
                     )}
+                    aria-current={active ? "page" : undefined}
                   >
                     <Icon className="h-4 w-4 shrink-0" aria-hidden />
                     <span>{item.label}</span>
@@ -87,7 +102,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       ) : null}
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card/95 px-1 py-2 backdrop-blur lg:hidden" aria-label="Mobile navigation">
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t bg-card/95 px-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur lg:hidden" aria-label="Mobile navigation">
         {mobileItems.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;
@@ -99,6 +114,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                 "flex h-14 flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium text-muted-foreground",
                 active && "bg-muted text-foreground"
               )}
+              aria-current={active ? "page" : undefined}
             >
               <Icon className="h-5 w-5" aria-hidden />
               <span>{item.label}</span>

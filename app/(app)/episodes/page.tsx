@@ -2,13 +2,14 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save } from "lucide-react";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoPopover } from "@/components/ui/info-popover";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useRecoveryData } from "@/lib/recovery-store";
+import { useToast } from "@/components/ui/toast";
+import { triggerSummary, useRecoveryData } from "@/lib/recovery-store";
 import { type EpisodeInput, episodeSchema } from "@/lib/validation";
 
 function formatLocalDateTimeInput(date = new Date()) {
@@ -17,8 +18,9 @@ function formatLocalDateTimeInput(date = new Date()) {
 }
 
 export default function EpisodesPage() {
-  const [message, setMessage] = useState("");
-  const { actions } = useRecoveryData();
+  const { state, actions } = useRecoveryData();
+  const toast = useToast();
+  const existingTriggerLabels = triggerSummary(state).map((trigger) => trigger.label);
   const form = useForm<EpisodeInput>({
     resolver: zodResolver(episodeSchema),
     defaultValues: {
@@ -35,7 +37,7 @@ export default function EpisodesPage() {
       occurredAt: new Date(data.occurredAt).toISOString(),
       durationMinutes: data.durationMinutes || undefined
     });
-    setMessage("Episode saved. Dashboard, triggers, insights, and calendar were updated.");
+    toast.success("Episode saved", "Dashboard, triggers, insights, and calendar updated.");
     form.reset({
       occurredAt: formatLocalDateTimeInput(),
       anxietyLevel: 5,
@@ -54,19 +56,15 @@ export default function EpisodesPage() {
         <p className="text-sm font-medium text-muted-foreground">OCD episode tracker</p>
         <h1 className="text-2xl font-semibold">Log what happened without judgment</h1>
       </header>
-      {message ? (
-        <div className="rounded-md border bg-card p-3 text-sm font-medium" role="status">
-          {message}
-        </div>
-      ) : null}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Episode details</CardTitle>
+          <InfoPopover label="What is an episode?" title="What episode means">
+            An episode is one OCD loop event: intrusive thought, anxiety, urge to perform a compulsion, and either doing
+            or resisting that compulsion.
+          </InfoPopover>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-            An episode is one OCD loop event: intrusive thought, anxiety, urge to perform a compulsion, and either doing or resisting that compulsion.
-          </div>
           <form className="grid gap-4" onSubmit={form.handleSubmit(onSubmit)}>
             <label className="grid gap-2 text-sm font-medium">
               Date and time
@@ -80,7 +78,12 @@ export default function EpisodesPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium">
                 Trigger
-                <Input {...form.register("trigger")} placeholder="Place, task, feeling..." />
+                <Input {...form.register("trigger")} list="existing-triggers" placeholder="Type or choose an existing trigger" />
+                <datalist id="existing-triggers">
+                  {existingTriggerLabels.map((label) => (
+                    <option key={label} value={label} />
+                  ))}
+                </datalist>
               </label>
               <label className="grid gap-2 text-sm font-medium">
                 Compulsion

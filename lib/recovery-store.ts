@@ -45,6 +45,7 @@ export type ErpSession = {
   id: string;
   exerciseId: string;
   startedAt: string;
+  pausedAt?: string;
   completedAt?: string;
   durationSeconds: number;
   anxietyBefore: number;
@@ -290,6 +291,40 @@ export function useRecoveryData() {
         });
         return session;
       },
+      pauseErpSession(exerciseId: string, sessionId: string, durationSeconds: number) {
+        const current = getRecoveryState();
+        saveRecoveryState({
+          ...current,
+          erpExercises: current.erpExercises.map((exercise) =>
+            exercise.id === exerciseId
+              ? {
+                  ...exercise,
+                  history: exercise.history.map((session) =>
+                    session.id === sessionId
+                      ? { ...session, durationSeconds, pausedAt: new Date().toISOString() }
+                      : session
+                  )
+                }
+              : exercise
+          )
+        });
+      },
+      resumeErpSession(exerciseId: string, sessionId: string) {
+        const current = getRecoveryState();
+        saveRecoveryState({
+          ...current,
+          erpExercises: current.erpExercises.map((exercise) =>
+            exercise.id === exerciseId
+              ? {
+                  ...exercise,
+                  history: exercise.history.map((session) =>
+                    session.id === sessionId ? { ...session, startedAt: new Date().toISOString(), pausedAt: undefined } : session
+                  )
+                }
+              : exercise
+          )
+        });
+      },
       completeErpSession(exerciseId: string, sessionId: string, durationSeconds: number, anxietyAfter: number, successRating: number, notes?: string) {
         const current = getRecoveryState();
         saveRecoveryState({
@@ -306,6 +341,7 @@ export function useRecoveryData() {
                   ? {
                       ...session,
                       durationSeconds,
+                      pausedAt: undefined,
                       anxietyAfter,
                       successRating,
                       notes,
@@ -319,7 +355,6 @@ export function useRecoveryData() {
       },
       addJournal(input: Omit<JournalEntry, "id" | "date" | "syncedAt">) {
         const current = getRecoveryState();
-        const today = new Date().toDateString();
         const journal = {
           id: id("journal"),
           date: new Date().toISOString(),
@@ -328,9 +363,33 @@ export function useRecoveryData() {
         };
         saveRecoveryState({
           ...current,
-          journals: [journal, ...current.journals.filter((item) => new Date(item.date).toDateString() !== today)]
+          journals: [journal, ...current.journals]
         });
         return journal;
+      },
+      updateJournal(journalId: string, input: Omit<JournalEntry, "id" | "date" | "syncedAt">) {
+        const current = getRecoveryState();
+        let updated: JournalEntry | null = null;
+        saveRecoveryState({
+          ...current,
+          journals: current.journals.map((journal) => {
+            if (journal.id !== journalId) return journal;
+            updated = {
+              ...journal,
+              ...input,
+              syncedAt: navigator.onLine ? new Date().toISOString() : null
+            };
+            return updated;
+          })
+        });
+        return updated;
+      },
+      deleteJournal(journalId: string) {
+        const current = getRecoveryState();
+        saveRecoveryState({
+          ...current,
+          journals: current.journals.filter((journal) => journal.id !== journalId)
+        });
       },
       clearAllData() {
         saveRecoveryState({ episodes: [], checkIns: [], erpExercises: [], triggers: [], journals: [] });

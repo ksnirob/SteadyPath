@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: "Steady Path",
   description: "Private OCD recovery tracking for episodes, ERP, mood, triggers, and progress.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg"
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

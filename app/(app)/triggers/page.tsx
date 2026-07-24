@@ -1,19 +1,23 @@
 "use client";
 
-import { Plus, Zap } from "lucide-react";
+import { Plus, Repeat2, X, Zap } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoPopover } from "@/components/ui/info-popover";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 import { formatDateLabel, triggerSummary, useRecoveryData } from "@/lib/recovery-store";
 
 export default function TriggersPage() {
   const { state, actions } = useRecoveryData();
+  const toast = useToast();
   const [showForm, setShowForm] = useState(false);
-  const [message, setMessage] = useState("");
+  const [showLogExisting, setShowLogExisting] = useState(false);
   const summary = triggerSummary(state);
+  const existingTriggerLabels = summary.map((trigger) => trigger.label);
 
   function addTrigger(formData: FormData) {
     const label = String(formData.get("label") || "").trim();
@@ -25,7 +29,20 @@ export default function TriggersPage() {
       context: String(formData.get("context") || "").trim()
     });
     setShowForm(false);
-    setMessage("Trigger added. Dashboard and Insights updated.");
+    toast.success("Trigger added", "Dashboard and Insights updated.");
+  }
+
+  function logExistingTrigger(formData: FormData) {
+    const label = String(formData.get("existingLabel") || "").trim();
+    if (!label) return;
+
+    actions.addTrigger({
+      label,
+      intensity: Number(formData.get("existingIntensity") || 5),
+      context: String(formData.get("existingContext") || "").trim()
+    });
+    setShowLogExisting(false);
+    toast.success("Trigger logged", `${label} count and average intensity updated.`);
   }
 
   return (
@@ -33,65 +50,146 @@ export default function TriggersPage() {
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Pattern library</p>
-          <h1 className="text-2xl font-semibold">Triggers</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold">Triggers</h1>
+            <InfoPopover label="How trigger intensity is calculated" title="Average intensity">
+              Average intensity is calculated from manual trigger logs and episode trigger anxiety ratings.
+            </InfoPopover>
+          </div>
         </div>
-        <Button onClick={() => setShowForm((value) => !value)}>
-          <Zap className="h-4 w-4" aria-hidden />
-          Add trigger
-        </Button>
+        <div className="grid gap-2 sm:flex">
+          <Button onClick={() => setShowForm((value) => !value)}>
+            <Zap className="h-4 w-4" aria-hidden />
+            Add trigger
+          </Button>
+          <Button variant="secondary" onClick={() => setShowLogExisting(true)} disabled={!existingTriggerLabels.length}>
+            <Repeat2 className="h-4 w-4" aria-hidden />
+            Log existing
+          </Button>
+        </div>
       </header>
 
-      {message ? (
-        <div className="rounded-md border bg-card p-3 text-sm font-medium" role="status">
-          {message}
+      {showForm ? (
+        <div className="fixed inset-0 z-50 bg-background/70 p-4 backdrop-blur-sm" onClick={() => setShowForm(false)}>
+          <Card
+            className="mx-auto mt-10 max-h-[calc(100vh-5rem)] w-full max-w-md overflow-y-auto shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-label="New trigger"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <CardTitle>New trigger</CardTitle>
+              <button
+                type="button"
+                className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+                onClick={() => setShowForm(false)}
+                aria-label="Close new trigger"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </CardHeader>
+            <CardContent>
+              <form action={addTrigger} className="grid gap-4">
+                <label className="grid gap-2 text-sm font-medium">
+                  Trigger label
+                  <Input name="label" placeholder="Example: uncertainty at work" required />
+                </label>
+                <label className="grid gap-2 text-sm font-medium">
+                  Intensity
+                  <Input name="intensity" type="number" min="1" max="10" defaultValue="5" />
+                </label>
+                <label className="grid gap-2 text-sm font-medium">
+                  Context
+                  <Textarea name="context" placeholder="Where did it happen? What made it stronger or easier?" />
+                </label>
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1">
+                    <Plus className="h-4 w-4" aria-hidden />
+                    Save trigger
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       ) : null}
 
-      {showForm ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>New trigger</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={addTrigger} className="grid gap-4 md:grid-cols-[1fr_160px]">
-              <label className="grid gap-2 text-sm font-medium">
-                Trigger label
-                <Input name="label" placeholder="Example: uncertainty at work" required />
-              </label>
-              <label className="grid gap-2 text-sm font-medium">
-                Intensity
-                <Input name="intensity" type="number" min="1" max="10" defaultValue="5" />
-              </label>
-              <label className="grid gap-2 text-sm font-medium md:col-span-2">
-                Context
-                <Textarea name="context" placeholder="Where did it happen? What made it stronger or easier?" />
-              </label>
-              <div className="flex gap-2 md:col-span-2">
-                <Button type="submit">
-                  <Plus className="h-4 w-4" aria-hidden />
-                  Save trigger
-                </Button>
-                <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+      {showLogExisting ? (
+        <div className="fixed inset-0 z-50 bg-background/70 p-4 backdrop-blur-sm" onClick={() => setShowLogExisting(false)}>
+          <Card
+            className="mx-auto mt-16 w-full max-w-md shadow-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Log existing trigger"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <CardTitle>Log existing trigger</CardTitle>
+              <button
+                type="button"
+                className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
+                onClick={() => setShowLogExisting(false)}
+                aria-label="Close log existing trigger"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </CardHeader>
+            <CardContent>
+              <form action={logExistingTrigger} className="grid gap-4">
+                <label className="grid gap-2 text-sm font-medium">
+                  Existing trigger
+                  <select name="existingLabel" className="h-11 rounded-md border bg-background px-3 text-sm">
+                    {existingTriggerLabels.map((label) => (
+                      <option key={label} value={label}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-2 text-sm font-medium">
+                  Intensity
+                  <Input name="existingIntensity" type="number" min="1" max="10" defaultValue="5" />
+                </label>
+                <label className="grid gap-2 text-sm font-medium">
+                  Context
+                  <Textarea name="existingContext" placeholder="What happened this time?" />
+                </label>
+                <div className="flex gap-2">
+                  <Button type="submit" className="flex-1">
+                    <Zap className="h-4 w-4" aria-hidden />
+                    Log again
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setShowLogExisting(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2">
         {summary.map((trigger) => (
-          <Card key={trigger.label}>
+          <Card key={trigger.label} className="overflow-hidden transition hover:border-primary hover:shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
                 <CardTitle>{trigger.label}</CardTitle>
                 <Badge>{trigger.count} logged</Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-semibold">{trigger.averageIntensity}/10</p>
-              <p className="mt-1 text-sm text-muted-foreground">Average intensity from trigger logs and episodes</p>
+            <CardContent className="space-y-3">
+              <div className="flex items-end justify-between gap-3">
+                <p className="text-3xl font-semibold">{trigger.averageIntensity}/10</p>
+                <p className="pb-1 text-xs text-muted-foreground">Average intensity</p>
+              </div>
+              <div className="h-2 rounded-full bg-muted">
+                <div className="h-2 rounded-full bg-primary" style={{ width: `${trigger.averageIntensity * 10}%` }} />
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -103,7 +201,7 @@ export default function TriggersPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           {state.triggers.slice(0, 8).map((trigger) => (
-            <div key={trigger.id} className="rounded-md border p-3">
+            <div key={trigger.id} className="rounded-md border bg-card p-3 transition hover:border-primary hover:bg-muted/50">
               <div className="flex items-center justify-between gap-3">
                 <p className="font-medium">{trigger.label}</p>
                 <Badge>{trigger.intensity}/10</Badge>

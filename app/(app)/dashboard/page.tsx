@@ -1,11 +1,12 @@
 "use client";
 
-import { Activity, Brain, Flame, Plus, ShieldCheck } from "lucide-react";
+import { Activity, ArrowRight, Brain, Flame, Plus, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { MiniLineChart } from "@/components/charts/mini-line-chart";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InfoPopover } from "@/components/ui/info-popover";
 import {
   formatDateLabel,
   formatTimeLabel,
@@ -68,18 +69,18 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>Recovery loop</CardTitle>
+            <div className="flex gap-2">
+              <InfoPopover label="What is the OCD loop?" title="OCD loop">
+                Intrusive thought leads to anxiety, then a compulsion, then short relief, then stronger doubt later.
+              </InfoPopover>
+              <InfoPopover label="How ERP breaks the loop" title="ERP breaks the loop">
+                Choose a trigger on purpose, allow anxiety, and prevent the compulsion until the urge changes.
+              </InfoPopover>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="rounded-md bg-muted p-3">
-              <p className="font-medium">OCD loop</p>
-              <p className="mt-1 text-muted-foreground">Intrusive thought leads to anxiety, then a compulsion, then short relief, then stronger doubt later.</p>
-            </div>
-            <div className="rounded-md bg-muted p-3">
-              <p className="font-medium">ERP breaks the loop</p>
-              <p className="mt-1 text-muted-foreground">Choose a trigger on purpose, allow anxiety, and prevent the compulsion until the urge changes.</p>
-            </div>
             <div className="flex items-center justify-between rounded-md border p-3">
               <span>Compulsion resistance</span>
               <Badge>{stats.resistedRate}%</Badge>
@@ -87,6 +88,42 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Connected recovery workflow</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm md:grid-cols-4">
+          <Link href="/triggers" className="group rounded-md border p-3 transition hover:border-primary hover:bg-muted/50">
+            <p className="font-medium">1. Identify triggers</p>
+            <p className="mt-1 text-muted-foreground">Recurring fears and situations feed trigger averages.</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition group-hover:opacity-100">
+              Open <ArrowRight className="h-3 w-3" aria-hidden />
+            </span>
+          </Link>
+          <Link href="/erp" className="group rounded-md border p-3 transition hover:border-primary hover:bg-muted/50">
+            <p className="font-medium">2. Build ERP plan</p>
+            <p className="mt-1 text-muted-foreground">Turn triggers into hierarchy items and response prevention.</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition group-hover:opacity-100">
+              Open <ArrowRight className="h-3 w-3" aria-hidden />
+            </span>
+          </Link>
+          <Link href="/episodes" className="group rounded-md border p-3 transition hover:border-primary hover:bg-muted/50">
+            <p className="font-medium">3. Log episodes</p>
+            <p className="mt-1 text-muted-foreground">Episodes update calendar, trigger counts, and anxiety trends.</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition group-hover:opacity-100">
+              Open <ArrowRight className="h-3 w-3" aria-hidden />
+            </span>
+          </Link>
+          <Link href="/insights" className="group rounded-md border p-3 transition hover:border-primary hover:bg-muted/50">
+            <p className="font-medium">4. Review progress</p>
+            <p className="mt-1 text-muted-foreground">Completed sessions and check-ins become progress signals.</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition group-hover:opacity-100">
+              Open <ArrowRight className="h-3 w-3" aria-hidden />
+            </span>
+          </Link>
+        </CardContent>
+      </Card>
 
       <section className="grid gap-4 lg:grid-cols-3">
         <Card>
@@ -96,7 +133,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-3">
             {recentEpisodes.length ? (
               recentEpisodes.map((episode) => (
-                <div key={episode.id} className="rounded-md bg-muted p-3">
+                <div key={episode.id} className="rounded-md border bg-muted/50 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium">{episode.trigger || "No trigger logged"}</p>
                     <Badge>{episode.anxietyLevel}/10</Badge>
@@ -118,7 +155,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-3">
             {triggers.length ? (
               triggers.map((trigger) => (
-                <div key={trigger.label} className="flex items-center justify-between rounded-md border p-3">
+                <div key={trigger.label} className="flex items-center justify-between rounded-md border bg-card p-3">
                   <span className="font-medium">{trigger.label}</span>
                   <span className="text-sm text-muted-foreground">{trigger.count} logged</span>
                 </div>
@@ -136,13 +173,13 @@ export default function DashboardPage() {
           <CardContent className="space-y-3">
             {recentJournal.length ? (
               recentJournal.map((entry) => (
-                <div key={entry.id} className="rounded-md border p-3">
+                <Link key={entry.id} href={`/journal/${entry.id}`} className="block rounded-md border p-3 transition hover:border-primary hover:bg-muted/50">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium">{entry.wins || entry.gratitude || "Journal entry"}</p>
                     <Badge>{entry.mood.replace("_", " ")}</Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{formatDateLabel(entry.date)}</p>
-                </div>
+                </Link>
               ))
             ) : (
               <p className="text-sm text-muted-foreground">No journal entries yet.</p>

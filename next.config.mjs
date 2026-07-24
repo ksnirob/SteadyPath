@@ -20,6 +20,7 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   typedRoutes: true,
   eslint: {
     ignoreDuringBuilds: true
