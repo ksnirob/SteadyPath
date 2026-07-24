@@ -83,125 +83,38 @@ export type RecoveryState = {
 
 const storageKey = "steady-path-recovery-state";
 const changedEvent = "steady-path-data-changed";
+const oldSeedIds = new Set(["episode-1", "episode-2", "checkin-1", "erp-1", "erp-2", "trigger-1", "trigger-2", "journal-1"]);
+let syncTimer: number | undefined;
 
 function id(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function todayAt(hour: number, minute = 0) {
-  const date = new Date();
-  date.setHours(hour, minute, 0, 0);
-  return date.toISOString();
-}
-
-const seedState: RecoveryState = {
-  episodes: [
-    {
-      id: "episode-1",
-      occurredAt: todayAt(8, 15),
-      intrusiveThought: "What if I left the door unlocked?",
-      trigger: "Leaving the apartment",
-      compulsion: "Door checking",
-      anxietyLevel: 7,
-      resistedCompulsion: true,
-      durationMinutes: 12,
-      mood: "NEUTRAL",
-      notes: "Checked once, then left and allowed uncertainty."
-    },
-    {
-      id: "episode-2",
-      occurredAt: todayAt(12, 40),
-      intrusiveThought: "What if the email sounded wrong?",
-      trigger: "Email from work",
-      compulsion: "Re-reading",
-      anxietyLevel: 6,
-      resistedCompulsion: false,
-      durationMinutes: 18,
-      mood: "LOW",
-      notes: "Re-read several times. Good ERP target."
-    }
-  ],
-  checkIns: [
-    {
-      id: "checkin-1",
-      date: new Date().toISOString(),
-      anxietyLevel: 4,
-      mood: "GOOD",
-      sleepHours: 7,
-      energyLevel: 6,
-      notes: "Better after morning walk."
-    }
-  ],
-  erpExercises: [
-    {
-      id: "erp-1",
-      title: "Touch doorknob, delay washing",
-      fearedOutcome: "I may feel contaminated or unsafe.",
-      responsePrevention: "Do not wash for 10 minutes; let anxiety rise and fall naturally.",
-      difficulty: 6,
-      hierarchyRank: 1,
-      completion: 60,
-      status: "In progress",
-      notes: "Practice with one doorknob first.",
-      history: []
-    },
-    {
-      id: "erp-2",
-      title: "Send message without re-reading",
-      fearedOutcome: "The message may contain a mistake.",
-      responsePrevention: "Read once, send, and do not reopen the thread for 20 minutes.",
-      difficulty: 5,
-      hierarchyRank: 2,
-      completion: 25,
-      status: "Planned",
-      notes: "Start with low-stakes messages.",
-      history: []
-    }
-  ],
-  triggers: [
-    {
-      id: "trigger-1",
-      label: "Contamination",
-      context: "Touching shared objects",
-      intensity: 6,
-      createdAt: todayAt(9)
-    },
-    {
-      id: "trigger-2",
-      label: "Uncertainty",
-      context: "Messages, locks, appliances",
-      intensity: 7,
-      createdAt: todayAt(10)
-    }
-  ],
-  journals: [
-    {
-      id: "journal-1",
-      date: new Date().toISOString(),
-      mood: "GOOD",
-      gratitude: "A calmer evening",
-      wins: "Delayed one compulsion",
-      challenges: "Morning checking urge",
-      body: "ERP felt difficult but possible today.",
-      syncedAt: new Date().toISOString()
-    }
-  ]
+const emptyState: RecoveryState = {
+  episodes: [],
+  checkIns: [],
+  erpExercises: [],
+  triggers: [],
+  journals: []
 };
 
 export function getRecoveryState(): RecoveryState {
-  if (typeof window === "undefined") return seedState;
+  if (typeof window === "undefined") return emptyState;
 
   const stored = window.localStorage.getItem(storageKey);
   if (!stored) {
-    saveRecoveryState(seedState);
-    return seedState;
+    saveRecoveryState(emptyState);
+    return emptyState;
   }
 
   try {
-    return JSON.parse(stored) as RecoveryState;
+    const parsed = JSON.parse(stored) as RecoveryState;
+    const normalized = removeOldSeedData(parsed);
+    if (normalized !== parsed) saveRecoveryState(normalized);
+    return normalized;
   } catch {
-    saveRecoveryState(seedState);
-    return seedState;
+    saveRecoveryState(emptyState);
+    return emptyState;
   }
 }
 
@@ -209,10 +122,11 @@ export function saveRecoveryState(state: RecoveryState) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(storageKey, JSON.stringify(state));
   window.dispatchEvent(new Event(changedEvent));
+  scheduleDatabaseSync(state);
 }
 
 export function useRecoveryData() {
-  const [state, setState] = useState<RecoveryState>(seedState);
+  const [state, setState] = useState<RecoveryState>(emptyState);
 
   useEffect(() => {
     const sync = () => setState(getRecoveryState());
@@ -393,9 +307,6 @@ export function useRecoveryData() {
       },
       clearAllData() {
         saveRecoveryState({ episodes: [], checkIns: [], erpExercises: [], triggers: [], journals: [] });
-      },
-      resetDemoData() {
-        saveRecoveryState(seedState);
       }
     }),
     []
@@ -490,4 +401,36 @@ function calculateCheckInStreak(checkIns: CheckIn[]) {
     cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
+}
+
+function removeOldSeedData(state: RecoveryState) {
+  const normalized: RecoveryState = {
+    episodes: state.episodes.filter((item) => !oldSeedIds.has(item.id)),
+    checkIns: state.checkIns.filter((item) => !oldSeedIds.has(item.id)),
+    erpExercises: state.erpExercises.filter((item) => !oldSeedIds.has(item.id)),
+    triggers: state.triggers.filter((item) => !oldSeedIds.has(item.id)),
+    journals: state.journals.filter((item) => !oldSeedIds.has(item.id))
+  };
+
+  const changed =
+    normalized.episodes.length !== state.episodes.length ||
+    normalized.checkIns.length !== state.checkIns.length ||
+    normalized.erpExercises.length !== state.erpExercises.length ||
+    normalized.triggers.length !== state.triggers.length ||
+    normalized.journals.length !== state.journals.length;
+
+  return changed ? normalized : state;
+}
+
+function scheduleDatabaseSync(state: RecoveryState) {
+  if (!navigator.onLine) return;
+  window.clearTimeout(syncTimer);
+  syncTimer = window.setTimeout(() => {
+    void fetch("/api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(state),
+      keepalive: true
+    }).catch(() => undefined);
+  }, 700);
 }
