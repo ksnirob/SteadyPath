@@ -34,6 +34,7 @@ const recoveryStateSchema = z.object({
     z.object({
       id: z.string(),
       title: z.string(),
+      triggerLabel: z.string().optional(),
       fearedOutcome: z.string(),
       responsePrevention: z.string(),
       difficulty: z.number(),
@@ -169,7 +170,7 @@ export async function POST(request: Request) {
             id: exercise.id,
             userId: user.id,
             title: exercise.title,
-            description: `${exercise.fearedOutcome}\n\nResponse prevention: ${exercise.responsePrevention}`,
+            description: `${exercise.triggerLabel ? `Trigger practiced: ${exercise.triggerLabel}\n\n` : ""}${exercise.fearedOutcome}\n\nResponse prevention: ${exercise.responsePrevention}`,
             hierarchyRank: exercise.hierarchyRank,
             difficulty: exercise.difficulty,
             status: statusMap[exercise.status],

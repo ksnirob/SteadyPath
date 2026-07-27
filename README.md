@@ -97,9 +97,9 @@ The app is organized around the main recovery workflow. On desktop, these option
 - `Dashboard`: The daily overview. Use it to quickly see today's anxiety, current streak, ERP progress, recent episodes, recent triggers, journal activity, recovery trends, and the connected recovery workflow.
 - `Calendar`: A monthly view of recovery activity. Use it to spot which days had check-ins, ERP work, episodes, or journal entries. Tap a day to open a detail modal.
 - `Check-in`: A fast daily form for anxiety, mood, sleep, energy, and notes. Use it once or twice a day to build consistent trend data.
-- `ERP`: Exposure and Response Prevention planning. Use `New exposure` to add your own exposure, use the suggested ERP actions to add standard practice items, then use `Start` or `Timer` to begin a session. `Pause` stops the timer without completing or saving the session; `Resume` continues it; `Complete session` saves it to ERP history, dashboard, calendar, and insights.
+- `ERP`: Exposure and Response Prevention planning. Use `New exposure` to add your own exposure and optionally choose which trigger the exposure practices. Use `Start` or `Timer` to begin a session. `Pause` stops the timer without completing or saving the session; `Resume` continues it; `Complete session` saves it to ERP history, dashboard, calendar, and insights.
 - `Episodes`: OCD episode logging. An episode means one OCD loop event: intrusive thought, anxiety, urge to perform a compulsion, and either doing or resisting the compulsion. Logged episodes update trigger counts, calendar activity, and anxiety trends.
-- `Triggers`: A library of recurring triggers. Use `Add trigger` for a new feared situation or theme. Use `Log existing` to record the same trigger again with a new intensity/context. The displayed score is the average intensity from manual trigger logs and episode logs.
+- `Triggers`: A library of recurring triggers. Use `Add trigger` for a new feared situation or theme. Use `Log existing` to record the same trigger again with a new intensity/context. Episode logs can also include a trigger. Use `Plan ERP` on a trigger card to create a practice item from that trigger. The displayed score is the average intensity from manual trigger logs and episode logs, not ERP sessions.
 - `Insights`: Charts and summary statistics. Use it to review weekly anxiety, mood trends, trigger frequency, recovery score, streaks, and average anxiety.
 - `Journal`: Daily reflection with offline autosave. Use it for gratitude, wins, challenges, and longer Markdown-friendly notes.
 - `Settings`: App preferences and account controls. Use it for theme, exports, notification preferences, privacy, account deletion, and the recovery workflow reference.
@@ -116,6 +116,8 @@ The app follows a standard ERP workflow:
 - Practice exposure on purpose while allowing uncertainty and anxiety to be present.
 - Prevent the response: checking, washing, reassurance seeking, confessing, reviewing, repeating, neutralizing, or avoidance.
 - Review completed sessions so progress is based on practice, not on whether anxiety disappeared instantly.
+
+In the app, triggers and ERP are connected for planning: a trigger can become an ERP hierarchy item. Trigger counts and average intensity remain separate, because those measure how often a trigger was logged through `Triggers` or `Episodes`. ERP sessions measure practice progress.
 
 The app also treats lapses as data. If a compulsion happens, log the episode, notice the trigger, and use it to plan the next manageable ERP step.
 

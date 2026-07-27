@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock, Keyboard, Pause, Play, Plus, ShieldCheck, X } from "lucide-react";
+import { Clock, MoreHorizontal, Pause, Pencil, Play, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,20 +21,13 @@ type ActiveSession = {
   paused: boolean;
 };
 
-const magicalThinkingTypingPlan = {
-  title: "Type D once without retyping",
-  fearedOutcome: "Seeing or typing the letter D may trigger the thought dementia, and OCD may demand certainty that it means nothing.",
-  responsePrevention:
-    "Type the letter or D-word one time, do not delete/retype it for a good feeling, do not replace the word, do not check symptoms, and continue the sentence while allowing uncertainty.",
-  difficulty: 4,
-  notes:
-    "Start with 5 minutes. Type simple D-words once: day, door, done, dream. Then practice harder words or phrases like dementia, maybe I have dementia maybe I do not. The win is preventing the ritual, not making the thought disappear."
-};
-
 export default function ErpPage() {
   const { state, actions } = useRecoveryData();
   const toast = useToast();
+  const searchParams = useSearchParams();
   const [showForm, setShowForm] = useState(false);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
   const [seconds, setSeconds] = useState(0);
   const [anxietyBefore, setAnxietyBefore] = useState(6);
@@ -41,6 +35,18 @@ export default function ErpPage() {
   const [successRating, setSuccessRating] = useState(7);
   const [finishNotes, setFinishNotes] = useState("");
   const activeSessionRef = useRef<HTMLDivElement | null>(null);
+  const triggerLabels = useMemo(
+    () => Array.from(new Set(state.triggers.map((trigger) => trigger.label.trim()).filter(Boolean))),
+    [state.triggers]
+  );
+  const selectedTriggerFromUrl = searchParams.get("trigger") || "";
+  const editingExercise = editingExerciseId
+    ? state.erpExercises.find((exercise) => exercise.id === editingExerciseId)
+    : null;
+
+  useEffect(() => {
+    if (selectedTriggerFromUrl) setShowForm(true);
+  }, [selectedTriggerFromUrl]);
 
   useEffect(() => {
     if (!activeSession || activeSession.paused) return;
@@ -91,39 +97,42 @@ export default function ErpPage() {
   function addExposure(formData: FormData) {
     const title = String(formData.get("title") || "").trim();
     if (!title) return;
-
-    actions.addErpExercise({
+    const input = {
       title,
+      triggerLabel: String(formData.get("triggerLabel") || "").trim() || undefined,
       fearedOutcome: String(formData.get("fearedOutcome") || "").trim(),
       responsePrevention: String(formData.get("responsePrevention") || "").trim(),
       difficulty: Number(formData.get("difficulty") || 5),
-      hierarchyRank: state.erpExercises.length + 1,
+      hierarchyRank: editingExercise?.hierarchyRank || state.erpExercises.length + 1,
       notes: String(formData.get("notes") || "").trim()
-    });
+    };
+
+    if (editingExerciseId) {
+      actions.updateErpExercise(editingExerciseId, input);
+      toast.success("Exposure updated", "ERP hierarchy and sync data updated.");
+    } else {
+      actions.addErpExercise(input);
+      toast.success("Exposure added", "It is now in your ERP hierarchy.");
+    }
+    setEditingExerciseId(null);
     setShowForm(false);
-    toast.success("Exposure added", "It is now in your ERP hierarchy.");
   }
 
-  function addMagicalThinkingPlan() {
-    const alreadyAdded = state.erpExercises.some((exercise) => exercise.title === magicalThinkingTypingPlan.title);
+  function closeForm() {
+    setEditingExerciseId(null);
+    setShowForm(false);
+  }
 
-    if (alreadyAdded) {
-      toast.info("Plan already added", "You can start it from your ERP hierarchy.");
-      return;
-    }
+  function editExercise(exerciseId: string) {
+    setEditingExerciseId(exerciseId);
+    setOpenMenuId(null);
+    setShowForm(true);
+  }
 
-    actions.addTrigger({
-      label: "Magical thinking with letter D",
-      intensity: 6,
-      context: "Typing D or D-words triggers dementia fear and the urge to retype until it feels right."
-    });
-
-    actions.addErpExercise({
-      ...magicalThinkingTypingPlan,
-      hierarchyRank: state.erpExercises.length + 1
-    });
-
-    toast.success("Action plan added", "Trigger and ERP hierarchy updated.");
+  function deleteExercise(exerciseId: string) {
+    actions.deleteErpExercise(exerciseId);
+    setOpenMenuId(null);
+    toast.destructive("Exposure deleted", "The ERP item and its sessions were removed.");
   }
 
   function startExercise(exerciseId: string, title: string) {
@@ -191,14 +200,19 @@ export default function ErpPage() {
             </InfoPopover>
           </div>
         </div>
-        <Button onClick={() => setShowForm((value) => !value)}>
+        <Button
+          onClick={() => {
+            setEditingExerciseId(null);
+            setShowForm((value) => !value);
+          }}
+        >
           <ShieldCheck className="h-4 w-4" aria-hidden />
           New exposure
         </Button>
       </header>
 
       {showForm ? (
-        <div className="fixed inset-0 z-50 bg-background/70 p-4 backdrop-blur-sm" onClick={() => setShowForm(false)}>
+        <div className="fixed inset-0 z-50 bg-background/70 p-4 backdrop-blur-sm" onClick={closeForm}>
           <Card
             className="mx-auto mt-10 max-h-[calc(100vh-5rem)] w-full max-w-2xl overflow-y-auto shadow-lg"
             role="dialog"
@@ -207,11 +221,11 @@ export default function ErpPage() {
             onClick={(event) => event.stopPropagation()}
           >
             <CardHeader className="flex flex-row items-center justify-between gap-3">
-              <CardTitle>Create exposure</CardTitle>
+              <CardTitle>{editingExerciseId ? "Edit exposure" : "Create exposure"}</CardTitle>
               <button
                 type="button"
                 className="grid h-9 w-9 place-items-center rounded-md hover:bg-muted"
-                onClick={() => setShowForm(false)}
+                onClick={closeForm}
                 aria-label="Close create exposure"
               >
                 <X className="h-5 w-5" aria-hidden />
@@ -219,32 +233,50 @@ export default function ErpPage() {
             </CardHeader>
             <CardContent>
               <form action={addExposure} className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-2 text-sm font-medium md:col-span-2">
+                  Trigger this exposure practices
+                  <select
+                    name="triggerLabel"
+                    className="h-11 rounded-md border bg-background px-3 text-sm"
+                    defaultValue={editingExercise?.triggerLabel || selectedTriggerFromUrl}
+                  >
+                    <option value="">No trigger selected</option>
+                    {triggerLabels.map((label) => (
+                      <option key={label} value={label}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ERP is often planned from a trigger. This link is for planning only; trigger counts still come from trigger logs and episodes.
+                  </span>
+                </label>
                 <label className="grid gap-2 text-sm font-medium">
                   Exposure
-                  <Input name="title" placeholder="Touch doorknob, then wait" required />
+                  <Input name="title" placeholder="Touch doorknob, then wait" defaultValue={editingExercise?.title || ""} required />
                 </label>
                 <label className="grid gap-2 text-sm font-medium">
                   Difficulty 0-10
-                  <Input name="difficulty" type="number" min="0" max="10" defaultValue="5" />
+                  <Input name="difficulty" type="number" min="0" max="10" defaultValue={editingExercise?.difficulty || 5} />
                 </label>
                 <label className="grid gap-2 text-sm font-medium">
                   Feared outcome
-                  <Textarea name="fearedOutcome" placeholder="What does OCD say will happen?" />
+                  <Textarea name="fearedOutcome" placeholder="What does OCD say will happen?" defaultValue={editingExercise?.fearedOutcome || ""} />
                 </label>
                 <label className="grid gap-2 text-sm font-medium">
                   Response prevention plan
-                  <Textarea name="responsePrevention" placeholder="Which compulsion will you not do?" />
+                  <Textarea name="responsePrevention" placeholder="Which compulsion will you not do?" defaultValue={editingExercise?.responsePrevention || ""} />
                 </label>
                 <label className="grid gap-2 text-sm font-medium md:col-span-2">
                   Notes
-                  <Textarea name="notes" placeholder="Starting duration, safety behaviors to avoid, next step..." />
+                  <Textarea name="notes" placeholder="Starting duration, safety behaviors to avoid, next step..." defaultValue={editingExercise?.notes || ""} />
                 </label>
                 <div className="flex gap-2 md:col-span-2">
                   <Button type="submit" className="flex-1 sm:flex-none">
                     <Plus className="h-4 w-4" aria-hidden />
-                    Add exposure
+                    {editingExerciseId ? "Update exposure" : "Add exposure"}
                   </Button>
-                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
+                  <Button type="button" variant="secondary" onClick={closeForm}>
                     Cancel
                   </Button>
                 </div>
@@ -302,48 +334,55 @@ export default function ErpPage() {
         </div>
       ) : null}
 
-      <Card className="border-primary/30 bg-primary/5">
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="flex items-center gap-2 text-sm font-medium text-primary">
-                <Keyboard className="h-4 w-4" aria-hidden />
-                Suggested plan for magical thinking OCD
-              </p>
-              <CardTitle className="mt-2">Typing D without retyping</CardTitle>
-            </div>
-            <Button onClick={addMagicalThinkingPlan}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Add action plan
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-3 text-sm md:grid-cols-3">
-          <div className="rounded-md border bg-card p-3">
-            <p className="font-medium">Trigger</p>
-            <p className="mt-1 text-muted-foreground">Typing D or D-words brings the thought dementia.</p>
-          </div>
-          <div className="rounded-md border bg-card p-3">
-            <p className="font-medium">Exposure</p>
-            <p className="mt-1 text-muted-foreground">Type D once, then type D-words once, and leave them unchanged.</p>
-          </div>
-          <div className="rounded-md border bg-card p-3">
-            <p className="font-medium">Response prevention</p>
-            <p className="mt-1 text-muted-foreground">No retyping, replacing, checking, symptom searching, or waiting for a good thought.</p>
-          </div>
-        </CardContent>
-      </Card>
-
       <section className="grid gap-4 lg:grid-cols-3">
         {state.erpExercises.map((exercise) => (
           <Card key={exercise.id} className="overflow-hidden transition hover:border-primary hover:shadow-sm">
             <CardHeader>
               <div className="flex items-center justify-between gap-3">
                 <CardTitle>{exercise.title}</CardTitle>
-                <Badge>{exercise.status}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge>{exercise.status}</Badge>
+                  <div className="relative">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setOpenMenuId((current) => (current === exercise.id ? null : exercise.id))}
+                      aria-label={`More actions for ${exercise.title}`}
+                    >
+                      <MoreHorizontal className="h-5 w-5" aria-hidden />
+                    </Button>
+                    {openMenuId === exercise.id ? (
+                      <div className="absolute right-0 top-10 z-20 grid w-36 gap-1 rounded-md border bg-card p-1 shadow-lg">
+                        <button
+                          type="button"
+                          className="flex h-9 items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted"
+                          onClick={() => editExercise(exercise.id)}
+                        >
+                          <Pencil className="h-4 w-4" aria-hidden />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="flex h-9 items-center gap-2 rounded-md px-3 text-left text-sm text-destructive hover:bg-destructive/10"
+                          onClick={() => deleteExercise(exercise.id)}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                          Delete
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {exercise.triggerLabel ? (
+                <div className="inline-flex max-w-full rounded-md bg-muted px-3 py-1 text-sm text-muted-foreground">
+                  Trigger practiced: <span className="ml-1 font-medium text-foreground">{exercise.triggerLabel}</span>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Difficulty {exercise.difficulty}/10</span>
                 <span>{exercise.completion}% complete</span>

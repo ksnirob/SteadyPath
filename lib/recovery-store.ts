@@ -31,6 +31,7 @@ export type CheckIn = {
 export type ErpExercise = {
   id: string;
   title: string;
+  triggerLabel?: string;
   fearedOutcome: string;
   responsePrevention: string;
   difficulty: number;
@@ -164,6 +165,43 @@ export function useRecoveryData() {
         });
         return episode;
       },
+      updateEpisode(episodeId: string, input: Omit<Episode, "id">) {
+        const current = getRecoveryState();
+        let previousTrigger: string | undefined;
+        const episodes = current.episodes.map((episode) => {
+          if (episode.id !== episodeId) return episode;
+          previousTrigger = episode.trigger;
+          return { id: episode.id, ...input };
+        });
+        const nextTriggerLabel = input.trigger?.trim();
+        const shouldAddTrigger =
+          nextTriggerLabel &&
+          nextTriggerLabel.toLowerCase() !== previousTrigger?.trim().toLowerCase();
+
+        saveRecoveryState({
+          ...current,
+          episodes,
+          triggers: shouldAddTrigger
+            ? [
+              {
+                id: id("trigger"),
+                label: nextTriggerLabel,
+                context: input.intrusiveThought,
+                  intensity: input.anxietyLevel,
+                  createdAt: input.occurredAt
+                },
+                ...current.triggers
+              ]
+            : current.triggers
+        });
+      },
+      deleteEpisode(episodeId: string) {
+        const current = getRecoveryState();
+        saveRecoveryState({
+          ...current,
+          episodes: current.episodes.filter((episode) => episode.id !== episodeId)
+        });
+      },
       addCheckIn(input: Omit<CheckIn, "id" | "date">) {
         const current = getRecoveryState();
         const today = new Date().toDateString();
@@ -180,11 +218,73 @@ export function useRecoveryData() {
         saveRecoveryState({ ...current, triggers: [trigger, ...current.triggers] });
         return trigger;
       },
+      updateTriggerLabel(
+        oldLabel: string,
+        input: { label: string; intensity?: number; context?: string }
+      ) {
+        const current = getRecoveryState();
+        const oldKey = oldLabel.trim().toLowerCase();
+        const nextLabel = input.label.trim();
+        if (!oldKey || !nextLabel) return null;
+        let firstManualUpdated = false;
+
+        saveRecoveryState({
+          ...current,
+          triggers: current.triggers.map((trigger) => {
+            if (trigger.label.trim().toLowerCase() !== oldKey) return trigger;
+            const shouldUpdateDetails = !firstManualUpdated;
+            firstManualUpdated = true;
+            return {
+              ...trigger,
+              label: nextLabel,
+              intensity: shouldUpdateDetails && input.intensity !== undefined ? input.intensity : trigger.intensity,
+              context: shouldUpdateDetails && input.context !== undefined ? input.context : trigger.context
+            };
+          }),
+          episodes: current.episodes.map((episode) =>
+            episode.trigger?.trim().toLowerCase() === oldKey ? { ...episode, trigger: nextLabel } : episode
+          ),
+          erpExercises: current.erpExercises.map((exercise) =>
+            exercise.triggerLabel?.trim().toLowerCase() === oldKey ? { ...exercise, triggerLabel: nextLabel } : exercise
+          )
+        });
+        return nextLabel;
+      },
+      deleteTriggerLabel(label: string) {
+        const current = getRecoveryState();
+        const key = label.trim().toLowerCase();
+        saveRecoveryState({
+          ...current,
+          triggers: current.triggers.filter((trigger) => trigger.label.trim().toLowerCase() !== key),
+          episodes: current.episodes.map((episode) =>
+            episode.trigger?.trim().toLowerCase() === key ? { ...episode, trigger: undefined } : episode
+          ),
+          erpExercises: current.erpExercises.map((exercise) =>
+            exercise.triggerLabel?.trim().toLowerCase() === key ? { ...exercise, triggerLabel: undefined } : exercise
+          )
+        });
+      },
       addErpExercise(input: Omit<ErpExercise, "id" | "completion" | "status" | "history">) {
         const current = getRecoveryState();
         const exercise = { id: id("erp"), completion: 0, status: "Planned" as ErpStatus, history: [], ...input };
         saveRecoveryState({ ...current, erpExercises: [exercise, ...current.erpExercises] });
         return exercise;
+      },
+      updateErpExercise(exerciseId: string, input: Omit<ErpExercise, "id" | "completion" | "status" | "history">) {
+        const current = getRecoveryState();
+        saveRecoveryState({
+          ...current,
+          erpExercises: current.erpExercises.map((exercise) =>
+            exercise.id === exerciseId ? { ...exercise, ...input } : exercise
+          )
+        });
+      },
+      deleteErpExercise(exerciseId: string) {
+        const current = getRecoveryState();
+        saveRecoveryState({
+          ...current,
+          erpExercises: current.erpExercises.filter((exercise) => exercise.id !== exerciseId)
+        });
       },
       startErpSession(exerciseId: string, anxietyBefore: number) {
         const current = getRecoveryState();

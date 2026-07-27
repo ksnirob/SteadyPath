@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { FileText, Plus, Save, X } from "lucide-react";
+import { FileText, MoreHorizontal, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ export default function JournalPage() {
   const toast = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const form = useForm<JournalInput>({
     resolver: zodResolver(journalSchema),
     defaultValues: { mood: "NEUTRAL", gratitude: "", wins: "", challenges: "", body: "" }
@@ -84,6 +85,12 @@ export default function JournalPage() {
     setEditingId(null);
     form.reset({ mood: "NEUTRAL", gratitude: "", wins: "", challenges: "", body: "" });
     setShowEditor(true);
+  }
+
+  function deleteJournal(entry: JournalEntry) {
+    actions.deleteJournal(entry.id);
+    setOpenMenuId(null);
+    toast.destructive("Journal deleted", "Dashboard, calendar, and insights updated.");
   }
 
   return (
@@ -174,15 +181,12 @@ export default function JournalPage() {
         <CardContent className="space-y-3">
           {state.journals.length ? (
             state.journals.map((entry) => (
-              <Link
-                key={entry.id}
-                href={`/journal/${entry.id}`}
-                className="group block overflow-hidden rounded-md border bg-card transition hover:border-primary hover:bg-muted/50 hover:shadow-sm focus-visible:outline-primary"
-              >
+              <div key={entry.id} className="group relative overflow-visible rounded-md border bg-card transition hover:border-primary hover:bg-muted/50 hover:shadow-sm">
+                <Link href={`/journal/${entry.id}`} className="block focus-visible:outline-primary">
                 <article className="relative p-3">
                   <span className="absolute inset-y-0 left-0 w-1 bg-primary opacity-0 transition group-hover:opacity-100" aria-hidden />
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pr-10">
                       <p className="font-medium">{entry.wins || entry.gratitude || "Journal entry"}</p>
                       <Badge>{entry.mood.replace("_", " ")}</Badge>
                     </div>
@@ -195,7 +199,43 @@ export default function JournalPage() {
                   <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm">{entry.body}</p>
                   <p className="mt-3 text-xs font-medium text-primary opacity-0 transition group-hover:opacity-100">Open details</p>
                 </article>
-              </Link>
+                </Link>
+                <div className="absolute right-2 top-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setOpenMenuId((current) => (current === entry.id ? null : entry.id))}
+                    aria-label={`More actions for journal ${formatDateLabel(entry.date)}`}
+                  >
+                    <MoreHorizontal className="h-5 w-5" aria-hidden />
+                  </Button>
+                  {openMenuId === entry.id ? (
+                    <div className="absolute right-0 top-10 z-20 grid w-36 gap-1 rounded-md border bg-card p-1 shadow-lg">
+                      <button
+                        type="button"
+                        className="flex h-9 items-center gap-2 rounded-md px-3 text-left text-sm hover:bg-muted"
+                        onClick={() => {
+                          setOpenMenuId(null);
+                          editJournal(entry);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="flex h-9 items-center gap-2 rounded-md px-3 text-left text-sm text-destructive hover:bg-destructive/10"
+                        onClick={() => deleteJournal(entry)}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                        Delete
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             ))
           ) : (
             <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
