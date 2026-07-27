@@ -2,7 +2,7 @@
 
 import { Clock, MoreHorizontal, Pause, Pencil, Play, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +22,14 @@ type ActiveSession = {
 };
 
 export default function ErpPage() {
+  return (
+    <Suspense fallback={<div className="space-y-6" />}>
+      <ErpPageContent />
+    </Suspense>
+  );
+}
+
+function ErpPageContent() {
   const { state, actions } = useRecoveryData();
   const toast = useToast();
   const searchParams = useSearchParams();
