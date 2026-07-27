@@ -86,6 +86,7 @@ const storageKey = "steady-path-recovery-state";
 const changedEvent = "steady-path-data-changed";
 const oldSeedIds = new Set(["episode-1", "episode-2", "checkin-1", "erp-1", "erp-2", "trigger-1", "trigger-2", "journal-1"]);
 let syncTimer: number | undefined;
+let hydratingFromDatabase = false;
 
 function id(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -104,7 +105,6 @@ export function getRecoveryState(): RecoveryState {
 
   const stored = window.localStorage.getItem(storageKey);
   if (!stored) {
-    saveRecoveryState(emptyState);
     return emptyState;
   }
 
@@ -114,7 +114,6 @@ export function getRecoveryState(): RecoveryState {
     if (normalized !== parsed) saveRecoveryState(normalized);
     return normalized;
   } catch {
-    saveRecoveryState(emptyState);
     return emptyState;
   }
 }
@@ -137,6 +136,34 @@ export function useRecoveryData() {
     return () => {
       window.removeEventListener(changedEvent, sync);
       window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (window.localStorage.getItem(storageKey)) return;
+    let cancelled = false;
+
+    async function hydrateFromDatabase() {
+      try {
+        const response = await fetch("/api/sync");
+        if (!response.ok) return;
+        const remoteState = (await response.json()) as RecoveryState;
+        if (cancelled || !hasRecoveryData(remoteState)) return;
+        hydratingFromDatabase = true;
+        window.localStorage.setItem(storageKey, JSON.stringify(remoteState));
+        window.dispatchEvent(new Event(changedEvent));
+        setState(remoteState);
+        window.setTimeout(() => {
+          hydratingFromDatabase = false;
+        }, 0);
+      } catch {
+        hydratingFromDatabase = false;
+      }
+    }
+
+    void hydrateFromDatabase();
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -523,6 +550,7 @@ function removeOldSeedData(state: RecoveryState) {
 }
 
 function scheduleDatabaseSync(state: RecoveryState) {
+  if (hydratingFromDatabase) return;
   if (!navigator.onLine) return;
   window.clearTimeout(syncTimer);
   syncTimer = window.setTimeout(() => {
@@ -533,4 +561,14 @@ function scheduleDatabaseSync(state: RecoveryState) {
       keepalive: true
     }).catch(() => undefined);
   }, 700);
+}
+
+function hasRecoveryData(state: RecoveryState) {
+  return Boolean(
+    state.episodes.length ||
+      state.checkIns.length ||
+      state.erpExercises.length ||
+      state.triggers.length ||
+      state.journals.length
+  );
 }

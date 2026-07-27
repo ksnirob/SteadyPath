@@ -88,9 +88,119 @@ const statusMap = {
   Skipped: "SKIPPED"
 } as const;
 
+const statusFromDb = {
+  PLANNED: "Planned",
+  IN_PROGRESS: "In progress",
+  COMPLETED: "Completed",
+  SKIPPED: "Skipped"
+} as const;
+
 function asDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function parseErpDescription(description?: string | null) {
+  const value = description || "";
+  const triggerMatch = value.match(/^Trigger practiced: (.+?)\n\n/);
+  const withoutTrigger = triggerMatch ? value.slice(triggerMatch[0].length) : value;
+  const [fearedOutcome = "", responsePrevention = ""] = withoutTrigger.split("\n\nResponse prevention: ");
+
+  return {
+    triggerLabel: triggerMatch?.[1],
+    fearedOutcome,
+    responsePrevention
+  };
+}
+
+function parseSessionHistory(notes?: string | null) {
+  if (!notes?.includes("Session history:")) return { notes: notes || undefined, history: [] };
+  const [plainNotes, rawHistory] = notes.split("\n\nSession history:");
+
+  try {
+    return {
+      notes: plainNotes.trim() || undefined,
+      history: JSON.parse(rawHistory.trim()) as unknown[]
+    };
+  } catch {
+    return { notes: plainNotes.trim() || undefined, history: [] };
+  }
+}
+
+export async function GET() {
+  const user = await prisma.user.findUnique({
+    where: { email: "local@steady-path.app" },
+    include: {
+      episodes: { where: { deletedAt: null }, orderBy: { occurredAt: "desc" } },
+      checkIns: { where: { deletedAt: null }, orderBy: { date: "desc" } },
+      erpExercises: { where: { deletedAt: null }, orderBy: { hierarchyRank: "asc" } },
+      triggerEvents: { where: { deletedAt: null }, orderBy: { createdAt: "desc" } },
+      journalEntries: { where: { deletedAt: null }, orderBy: { date: "desc" } }
+    }
+  });
+
+  if (!user) {
+    return NextResponse.json({ episodes: [], checkIns: [], erpExercises: [], triggers: [], journals: [] });
+  }
+
+  return NextResponse.json({
+    episodes: user.episodes.map((episode) => ({
+      id: episode.id,
+      occurredAt: episode.occurredAt.toISOString(),
+      intrusiveThought: episode.intrusiveThought,
+      trigger: episode.trigger || undefined,
+      compulsion: episode.compulsion || undefined,
+      anxietyLevel: episode.anxietyLevel,
+      resistedCompulsion: episode.resistedCompulsion,
+      durationMinutes: episode.durationMinutes || undefined,
+      notes: episode.notes || undefined,
+      mood: episode.mood
+    })),
+    checkIns: user.checkIns.map((checkIn) => ({
+      id: checkIn.id,
+      date: checkIn.date.toISOString(),
+      anxietyLevel: checkIn.anxietyLevel,
+      mood: checkIn.mood,
+      sleepHours: checkIn.sleepHours || undefined,
+      energyLevel: checkIn.energyLevel || undefined,
+      notes: checkIn.notes || undefined
+    })),
+    erpExercises: user.erpExercises.map((exercise) => {
+      const description = parseErpDescription(exercise.description);
+      const notes = parseSessionHistory(exercise.notes);
+
+      return {
+        id: exercise.id,
+        title: exercise.title,
+        triggerLabel: description.triggerLabel,
+        fearedOutcome: description.fearedOutcome,
+        responsePrevention: description.responsePrevention,
+        difficulty: exercise.difficulty,
+        hierarchyRank: exercise.hierarchyRank,
+        completion: exercise.completionPercent,
+        status: statusFromDb[exercise.status],
+        notes: notes.notes,
+        history: notes.history
+      };
+    }),
+    triggers: user.triggerEvents.map((trigger) => ({
+      id: trigger.id,
+      label: trigger.label,
+      context: trigger.context || undefined,
+      intensity: trigger.intensity || 0,
+      createdAt: trigger.createdAt.toISOString()
+    })),
+    journals: user.journalEntries.map((journal) => ({
+      id: journal.id,
+      date: journal.date.toISOString(),
+      mood: journal.mood,
+      gratitude: journal.gratitude || undefined,
+      wins: journal.wins || undefined,
+      challenges: journal.challenges || undefined,
+      body: journal.body,
+      syncedAt: journal.syncedAt?.toISOString() || null
+    }))
+  });
 }
 
 export async function POST(request: Request) {
