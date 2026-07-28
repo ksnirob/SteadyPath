@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "seed:auth": "node scripts/seed-auth-user.cjs",
     "test": "vitest run"
   },
   "dependencies": {

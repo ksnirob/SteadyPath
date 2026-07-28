@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { signOut } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { HeartPulse, MoreHorizontal, X } from "lucide-react";
+import { HeartPulse, LogOut, MoreHorizontal, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { navItems } from "@/components/layout/nav-items";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,10 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   const mobileItems = navItems.slice(0, 4);
   const moreItems = navItems.slice(4);
   const moreActive = moreItems.some((item) => item.href === pathname);
+
+  function handleSignOut() {
+    void signOut({ callbackUrl: "/login" });
+  }
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -27,14 +32,14 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r bg-card px-3 py-4 lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-card px-3 py-4 lg:flex">
         <Link href="/dashboard" className="mb-6 flex items-center gap-3 px-3 text-lg font-semibold">
           <span className="grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground">
             <HeartPulse className="h-5 w-5" aria-hidden />
           </span>
           Steady Path
         </Link>
-        <nav className="space-y-1" aria-label="Main navigation">
+        <nav className="flex-1 space-y-1" aria-label="Main navigation">
           {navItems.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;
@@ -54,6 +59,14 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="mt-4 flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        >
+          <LogOut className="h-4 w-4" aria-hidden />
+          Log out
+        </button>
       </aside>
       <main className="pb-[calc(6rem+env(safe-area-inset-bottom))] lg:ml-64 lg:pb-0">
         <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">{children}</div>
@@ -99,6 +112,14 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                 );
               })}
             </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="mt-3 flex min-h-12 w-full items-center gap-3 rounded-md border px-3 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+              <span>Log out</span>
+            </button>
           </div>
         </div>
       ) : null}

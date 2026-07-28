@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   if (process.env.AUTH_REQUIRED !== "true") return NextResponse.next();
 
-  const publicRoutes = ["/login", "/register", "/offline"];
+  const publicRoutes = ["/login", "/register", "/api/register", "/offline"];
   if (publicRoutes.some((route) => request.nextUrl.pathname.startsWith(route))) return NextResponse.next();
 
   const hasSessionCookie =
