@@ -14,8 +14,6 @@ import { useToast } from "@/components/ui/toast";
 import { formatDateLabel, formatTimeLabel, type JournalEntry, useRecoveryData } from "@/lib/recovery-store";
 import { type JournalInput, journalSchema } from "@/lib/validation";
 
-const storageKey = "journal-draft";
-
 export default function JournalPage() {
   const { state, actions } = useRecoveryData();
   const toast = useToast();
@@ -26,16 +24,6 @@ export default function JournalPage() {
     resolver: zodResolver(journalSchema),
     defaultValues: { mood: "NEUTRAL", gratitude: "", wins: "", challenges: "", body: "" }
   });
-
-  useEffect(() => {
-    const draft = localStorage.getItem(storageKey);
-    if (draft) form.reset(JSON.parse(draft));
-  }, [form]);
-
-  useEffect(() => {
-    const subscription = form.watch((value) => localStorage.setItem(storageKey, JSON.stringify(value)));
-    return () => subscription.unsubscribe();
-  }, [form]);
 
   useEffect(() => {
     if (editingId || typeof window === "undefined") return;
@@ -56,7 +44,6 @@ export default function JournalPage() {
     }
     setShowEditor(false);
     form.reset({ mood: "NEUTRAL", gratitude: "", wins: "", challenges: "", body: "" });
-    localStorage.removeItem(storageKey);
   }
 
   function editJournal(entry: JournalEntry) {
@@ -77,7 +64,6 @@ export default function JournalPage() {
     setEditingId(null);
     setShowEditor(false);
     form.reset({ mood: "NEUTRAL", gratitude: "", wins: "", challenges: "", body: "" });
-    localStorage.removeItem(storageKey);
     toast.info("Edit cancelled");
   }
 
@@ -97,7 +83,7 @@ export default function JournalPage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">Autosaved offline</p>
+          <p className="text-sm font-medium text-muted-foreground">Database-backed</p>
           <h1 className="text-2xl font-semibold">Daily journal</h1>
         </div>
         <Button type="button" onClick={startNewJournal}>

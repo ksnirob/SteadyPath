@@ -123,24 +123,25 @@ The app also treats lapses as data. If a compulsion happens, log the episode, no
 
 ## Current Behavior
 
-- Dashboard, Calendar, Check-in, ERP, Episodes, Triggers, Insights, Journal, and Settings share the same local recovery store.
+- Dashboard, Calendar, Check-in, ERP, Episodes, Triggers, Insights, Journal, and Settings share the same database-backed recovery store.
 - New check-ins, episodes, trigger logs, ERP exposures, ERP sessions, and journal entries update connected views immediately.
-- Data is stored locally in the browser first so the app works fast and offline.
-- Every save, update, and delete automatically syncs the browser recovery state to Postgres through `/api/sync` when the browser is online.
+- Saved recovery data is loaded from Postgres through `/api/sync`.
+- Every save, update, and delete writes the recovery state back to Postgres through `/api/sync`.
+- If an older browser has recovery data in the legacy `steady-path-recovery-state` localStorage key, the app migrates it to Postgres once and removes that legacy local copy after a successful sync.
 - The old static demo seed data has been removed. A fresh browser starts with empty recovery data.
 - Route protection is controlled by `AUTH_REQUIRED`. Keep it `false` for local demo mode; set it to `true` when auth is configured.
 
 ## Automatic Database Sync
 
-The app uses an offline-first pattern:
+The app uses a database-first pattern:
 
-- The UI reads and writes browser `localStorage` immediately.
-- `saveRecoveryState` schedules a background POST to `/api/sync`.
+- The UI hydrates saved recovery data from `GET /api/sync`.
+- `saveRecoveryState` updates the current in-memory UI state and schedules a background `POST /api/sync`.
 - `/api/sync` upserts a local user with email `local@steady-path.app`.
-- The endpoint replaces that user's Postgres rows with the current browser state.
-- Clearing local data also clears the synced recovery rows for that local user.
+- The endpoint replaces that user's Postgres rows with the current recovery state.
+- Clearing data in the app also clears the synced recovery rows for that local user.
 
-This means Prisma Studio may look empty until the app has loaded once and a save/update/delete happens. Refresh the app after changing `.env`, then create or update any entry to trigger sync.
+For Vercel, set `DATABASE_URL` to the Vercel/Prisma Postgres connection string in Project Settings, then run `npx prisma db push` locally against that URL or redeploy after the schema is already pushed.
 
 Synced tables:
 

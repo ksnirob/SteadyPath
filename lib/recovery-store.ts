@@ -82,11 +82,12 @@ export type RecoveryState = {
   journals: JournalEntry[];
 };
 
-const storageKey = "steady-path-recovery-state";
+const legacyStorageKey = "steady-path-recovery-state";
 const changedEvent = "steady-path-data-changed";
 const oldSeedIds = new Set(["episode-1", "episode-2", "checkin-1", "erp-1", "erp-2", "trigger-1", "trigger-2", "journal-1"]);
 let syncTimer: number | undefined;
 let hydratingFromDatabase = false;
+let currentState: RecoveryState | undefined;
 
 function id(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -101,28 +102,14 @@ const emptyState: RecoveryState = {
 };
 
 export function getRecoveryState(): RecoveryState {
-  if (typeof window === "undefined") return emptyState;
-
-  const stored = window.localStorage.getItem(storageKey);
-  if (!stored) {
-    return emptyState;
-  }
-
-  try {
-    const parsed = JSON.parse(stored) as RecoveryState;
-    const normalized = removeOldSeedData(parsed);
-    if (normalized !== parsed) saveRecoveryState(normalized);
-    return normalized;
-  } catch {
-    return emptyState;
-  }
+  return currentState ?? emptyState;
 }
 
 export function saveRecoveryState(state: RecoveryState) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(storageKey, JSON.stringify(state));
+  currentState = removeOldSeedData(state);
   window.dispatchEvent(new Event(changedEvent));
-  scheduleDatabaseSync(state);
+  scheduleDatabaseSync(currentState);
 }
 
 export function useRecoveryData() {
@@ -132,25 +119,28 @@ export function useRecoveryData() {
     const sync = () => setState(getRecoveryState());
     sync();
     window.addEventListener(changedEvent, sync);
-    window.addEventListener("storage", sync);
     return () => {
       window.removeEventListener(changedEvent, sync);
-      window.removeEventListener("storage", sync);
     };
   }, []);
 
   useEffect(() => {
-    if (window.localStorage.getItem(storageKey)) return;
     let cancelled = false;
 
-    async function hydrateFromDatabase() {
+    async function loadDatabaseState() {
       try {
+        const legacyState = getLegacyRecoveryState();
+        if (hasRecoveryData(legacyState)) {
+          saveRecoveryState(legacyState);
+          return;
+        }
+
         const response = await fetch("/api/sync");
         if (!response.ok) return;
-        const remoteState = (await response.json()) as RecoveryState;
-        if (cancelled || !hasRecoveryData(remoteState)) return;
+        const remoteState = removeOldSeedData((await response.json()) as RecoveryState);
+        if (cancelled) return;
         hydratingFromDatabase = true;
-        window.localStorage.setItem(storageKey, JSON.stringify(remoteState));
+        currentState = remoteState;
         window.dispatchEvent(new Event(changedEvent));
         setState(remoteState);
         window.setTimeout(() => {
@@ -161,7 +151,7 @@ export function useRecoveryData() {
       }
     }
 
-    void hydrateFromDatabase();
+    void loadDatabaseState();
     return () => {
       cancelled = true;
     };
@@ -549,6 +539,19 @@ function removeOldSeedData(state: RecoveryState) {
   return changed ? normalized : state;
 }
 
+function getLegacyRecoveryState() {
+  if (typeof window === "undefined") return emptyState;
+
+  const stored = window.localStorage.getItem(legacyStorageKey);
+  if (!stored) return emptyState;
+
+  try {
+    return removeOldSeedData(JSON.parse(stored) as RecoveryState);
+  } catch {
+    return emptyState;
+  }
+}
+
 function scheduleDatabaseSync(state: RecoveryState) {
   if (hydratingFromDatabase) return;
   if (!navigator.onLine) return;
@@ -559,7 +562,11 @@ function scheduleDatabaseSync(state: RecoveryState) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(state),
       keepalive: true
-    }).catch(() => undefined);
+    })
+      .then((response) => {
+        if (response.ok) window.localStorage.removeItem(legacyStorageKey);
+      })
+      .catch(() => undefined);
   }, 700);
 }
 
