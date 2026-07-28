@@ -7,13 +7,19 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
 const signInSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email().transform((value) => value.toLowerCase()),
   password: z.string().min(8)
 });
+
+function isAuthRequired() {
+  if (process.env.AUTH_REQUIRED === "false") return false;
+  return process.env.AUTH_REQUIRED === "true" || process.env.NODE_ENV === "production";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  trustHost: true,
   pages: {
     signIn: "/login"
   },
@@ -40,9 +46,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     authorized({ auth: session, request }) {
-      if (process.env.AUTH_REQUIRED !== "true") return true;
+      if (!isAuthRequired()) return true;
       const pathname = request.nextUrl.pathname;
-      const publicRoutes = ["/login", "/register", "/offline"];
+      const publicRoutes = ["/login", "/register", "/api/register", "/offline"];
       if (publicRoutes.some((route) => pathname.startsWith(route))) return true;
       return Boolean(session?.user);
     }
