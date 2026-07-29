@@ -47,7 +47,7 @@ export default function InsightsPage() {
           ["Resistance rate", `${stats.resistedRate}%`, "Compulsions resisted"]
         ].map(([title, value, detail]) => (
           <Card key={title}>
-            <CardContent className="p-4">
+            <CardContent className="flex min-h-28 flex-col justify-center !p-5">
               <p className="text-sm text-muted-foreground">{title}</p>
               <p className="mt-2 text-3xl font-semibold">{value}</p>
               <p className="mt-1 text-sm text-muted-foreground">{detail}</p>

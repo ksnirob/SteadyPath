@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowDownToLine, ArrowRight, ArrowUpToLine, BookOpen, Moon, Sun } from "lucide-react";
+import { ArrowRight, BookOpen, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
-import { saveRecoveryState, type RecoveryState, useRecoveryData } from "@/lib/recovery-store";
+import { useRecoveryData } from "@/lib/recovery-store";
 
 const workflowItems: { href: "/triggers" | "/erp" | "/episodes" | "/insights"; title: string; text: string }[] = [
   {
@@ -52,44 +52,6 @@ export default function SettingsPage() {
     toast.destructive("Local data deleted", "All local recovery data was removed from this browser.");
   }
 
-  async function pushLocalToDatabase() {
-    const response = await fetch("/api/sync", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(state)
-    });
-
-    if (!response.ok) {
-      toast.destructive("Database push failed", "Check DATABASE_URL and redeploy/server logs.");
-      return;
-    }
-
-    const result = (await response.json()) as {
-      counts: { episodes: number; checkIns: number; erpExercises: number; triggers: number; journals: number };
-    };
-
-    toast.success(
-      "Local data pushed",
-      `${result.counts.triggers} triggers, ${result.counts.episodes} episodes, ${result.counts.erpExercises} ERP items, ${result.counts.journals} journals, and ${result.counts.checkIns} check-ins saved to DB.`
-    );
-  }
-
-  async function loadFromDatabase() {
-    const response = await fetch("/api/sync");
-
-    if (!response.ok) {
-      toast.destructive("Database load failed", "Check DATABASE_URL and redeploy/server logs.");
-      return;
-    }
-
-    const remoteState = (await response.json()) as RecoveryState;
-    saveRecoveryState(remoteState);
-    toast.success(
-      "Database loaded",
-      `${remoteState.triggers.length} triggers, ${remoteState.episodes.length} episodes, ${remoteState.erpExercises.length} ERP items, ${remoteState.journals.length} journals, and ${remoteState.checkIns.length} check-ins loaded.`
-    );
-  }
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <header>
@@ -106,16 +68,7 @@ export default function SettingsPage() {
       <Card>
         <CardHeader><CardTitle>Data and privacy</CardTitle></CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2">
-          <Button onClick={pushLocalToDatabase}>
-            <ArrowUpToLine className="h-4 w-4" aria-hidden />
-            Push local to DB
-          </Button>
-          <Button variant="secondary" onClick={loadFromDatabase}>
-            <ArrowDownToLine className="h-4 w-4" aria-hidden />
-            Load from DB
-          </Button>
           <Button variant="secondary" onClick={exportJson}>Export JSON</Button>
-          <Button variant="secondary">Notification preferences</Button>
           <Button variant="destructive" onClick={deleteData}>Delete local data</Button>
         </CardContent>
       </Card>

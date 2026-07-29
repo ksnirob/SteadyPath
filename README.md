@@ -101,8 +101,8 @@ The app is organized around the main recovery workflow. On desktop, these option
 - `Episodes`: OCD episode logging. An episode means one OCD loop event: intrusive thought, anxiety, urge to perform a compulsion, and either doing or resisting the compulsion. Logged episodes update trigger counts, calendar activity, and anxiety trends.
 - `Triggers`: A library of recurring triggers. Use `Add trigger` for a new feared situation or theme. Use `Log existing` to record the same trigger again with a new intensity/context. Episode logs can also include a trigger. Use `Plan ERP` on a trigger card to create a practice item from that trigger. The displayed score is the average intensity from manual trigger logs and episode logs, not ERP sessions.
 - `Insights`: Charts and summary statistics. Use it to review weekly anxiety, mood trends, trigger frequency, recovery score, streaks, and average anxiety.
-- `Journal`: Daily reflection with offline autosave. Use it for gratitude, wins, challenges, and longer Markdown-friendly notes.
-- `Settings`: App preferences and account controls. Use it for theme, exports, notification preferences, privacy, account deletion, and the recovery workflow reference.
+- `Journal`: Daily reflection. Use it for gratitude, wins, challenges, and longer Markdown-friendly notes.
+- `Settings`: App preferences and account controls. Use it for theme, exports, privacy, data deletion, and the recovery workflow reference.
 - `Profile`: Personal account details. Use it for preferred name, email, and timezone.
 - `Login`: Authentication screen for email/password or Google sign-in once production auth is enabled.
 - `Offline`: Fallback page shown when the PWA cannot reach the network.
@@ -127,7 +127,6 @@ The app also treats lapses as data. If a compulsion happens, log the episode, no
 - New check-ins, episodes, trigger logs, ERP exposures, ERP sessions, and journal entries update connected views immediately.
 - Saved recovery data is loaded from Postgres through `/api/sync`.
 - Every save, update, and delete writes the recovery state back to Postgres through `/api/sync`.
-- If an older browser has recovery data in the legacy `steady-path-recovery-state` localStorage key, the app migrates it to Postgres once and removes that legacy local copy after a successful sync.
 - The old static demo seed data has been removed. A fresh browser starts with empty recovery data.
 - Route protection is controlled by `AUTH_REQUIRED`. Keep it `false` for local demo mode; set it to `true` when auth is configured.
 
