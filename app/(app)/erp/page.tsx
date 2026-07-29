@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, MoreHorizontal, Pause, Pencil, Play, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { MoreHorizontal, Pause, Pencil, Play, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,9 @@ function ErpPageContent() {
   const [anxietyAfter, setAnxietyAfter] = useState(3);
   const [successRating, setSuccessRating] = useState(7);
   const [finishNotes, setFinishNotes] = useState("");
+  const [practiceText, setPracticeText] = useState("");
+  const [showPracticeNotes, setShowPracticeNotes] = useState(false);
+  const [showMobileResponsePrevention, setShowMobileResponsePrevention] = useState(false);
   const activeSessionRef = useRef<HTMLDivElement | null>(null);
   const triggerLabels = useMemo(
     () => Array.from(new Set(state.triggers.map((trigger) => trigger.label.trim()).filter(Boolean))),
@@ -50,6 +53,9 @@ function ErpPageContent() {
   const selectedTriggerFromUrl = searchParams.get("trigger") || "";
   const editingExercise = editingExerciseId
     ? state.erpExercises.find((exercise) => exercise.id === editingExerciseId)
+    : null;
+  const activeExercise = activeSession
+    ? state.erpExercises.find((exercise) => exercise.id === activeSession.exerciseId)
     : null;
 
   useEffect(() => {
@@ -147,6 +153,10 @@ function ErpPageContent() {
     const session = actions.startErpSession(exerciseId, anxietyBefore);
     setActiveSession({ exerciseId, sessionId: session.id, title, startedAt: Date.now(), accumulatedSeconds: 0, paused: false });
     setSeconds(0);
+    setPracticeText("");
+    setFinishNotes("");
+    setShowPracticeNotes(false);
+    setShowMobileResponsePrevention(false);
     toast.info("ERP session started", `"${title}" is active.`);
   }
 
@@ -169,18 +179,27 @@ function ErpPageContent() {
 
   function completeExercise() {
     if (!activeSession) return;
+    const sessionNotes = [
+      practiceText.trim() ? `Practice text:\n${practiceText.trim()}` : "",
+      finishNotes.trim() ? `Session notes:\n${finishNotes.trim()}` : ""
+    ]
+      .filter(Boolean)
+      .join("\n\n");
     actions.completeErpSession(
       activeSession.exerciseId,
       activeSession.sessionId,
       seconds,
       anxietyAfter,
       successRating,
-      finishNotes
+      sessionNotes
     );
     toast.success("ERP session completed", "ERP history, dashboard, calendar, and insights updated.");
     setActiveSession(null);
     setSeconds(0);
     setFinishNotes("");
+    setPracticeText("");
+    setShowPracticeNotes(false);
+    setShowMobileResponsePrevention(false);
   }
 
   return (
@@ -296,60 +315,152 @@ function ErpPageContent() {
 
       {activeSession ? (
         <div ref={activeSessionRef} className="scroll-mt-24 lg:scroll-mt-4">
-          <Card className="border-primary/40 shadow-md shadow-primary/10">
-            <CardContent className="grid gap-4 p-4 lg:grid-cols-[1fr_320px]">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-muted-foreground">Active ERP session</p>
-                  <InfoPopover label="Active ERP guidance" title="During ERP">
-                    Stay with the trigger. Let anxiety move on its own. The goal is resisting the compulsion, not feeling
-                    calm instantly.
-                  </InfoPopover>
+          <Card className="overflow-hidden border-primary/40 shadow-md shadow-primary/10">
+            <CardContent className="!p-0">
+              <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+                <div className="grid h-full gap-4 bg-primary/5 p-4 sm:gap-5 sm:p-6">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-primary text-primary-foreground">Active ERP</Badge>
+                      <InfoPopover label="Active ERP guidance" title="During ERP">
+                        Stay with the trigger. Let anxiety move on its own. The goal is resisting the compulsion, not feeling
+                        calm instantly.
+                      </InfoPopover>
+                    </div>
+                    <h2 className="mt-3 max-w-2xl text-xl font-semibold leading-tight sm:mt-4 sm:text-2xl">
+                      {activeSession.title}
+                    </h2>
+                  </div>
+                  {activeExercise?.responsePrevention ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-2 md:hidden">
+                        <button
+                          type="button"
+                          className="flex min-h-10 items-center justify-between gap-2 rounded-md bg-background/70 px-3 py-2 text-left text-sm font-medium"
+                          onClick={() => setShowMobileResponsePrevention((value) => !value)}
+                          aria-expanded={showMobileResponsePrevention}
+                        >
+                          <span className="flex min-w-0 items-center gap-2">
+                            <ShieldCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                            <span className="truncate">{showMobileResponsePrevention ? "Hide Response" : "Show Response"}</span>
+                          </span>
+                        </button>
+                        <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-md bg-background/70 px-3 py-2 text-sm font-medium">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-border accent-primary"
+                            checked={showPracticeNotes}
+                            onChange={(event) => setShowPracticeNotes(event.target.checked)}
+                          />
+                          <span className="truncate">Practice notes</span>
+                        </label>
+                      </div>
+                      <div
+                        className={
+                          showMobileResponsePrevention
+                            ? "rounded-md border bg-background/80 p-4 text-sm"
+                            : "hidden rounded-md border bg-background/80 p-4 text-sm md:block"
+                        }
+                      >
+                        <p className="hidden items-center gap-2 font-medium md:flex">
+                          <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
+                          Response prevention
+                        </p>
+                        <p className="text-muted-foreground md:mt-1">{activeExercise.responsePrevention}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-md border bg-background/80 p-4 text-sm text-muted-foreground">
+                      Keep doing the exposure and prevent the ritual. You do not need a good thought before moving on.
+                    </div>
+                  )}
+                  <Textarea
+                    className="hidden min-h-36 resize-y bg-background text-base leading-relaxed md:block"
+                    value={practiceText}
+                    onChange={(event) => setPracticeText(event.target.value)}
+                    placeholder="Practice notes"
+                  />
                 </div>
-                <p className="mt-2 text-xl font-semibold">{activeSession.title}</p>
-              </div>
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-3xl font-semibold">{timerLabel}</span>
-                  <Button variant="secondary" onClick={togglePause}>
-                    {activeSession.paused ? <Play className="h-4 w-4" aria-hidden /> : <Pause className="h-4 w-4" aria-hidden />}
-                    {activeSession.paused ? "Resume" : "Pause"}
+                <div className="grid gap-3 border-t p-4 sm:gap-4 sm:p-6 lg:border-l lg:border-t-0">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Timer</p>
+                      <span className="mt-1 block font-mono text-4xl font-semibold leading-none">{timerLabel}</span>
+                    </div>
+                    <Button variant="secondary" onClick={togglePause}>
+                      {activeSession.paused ? <Play className="h-4 w-4" aria-hidden /> : <Pause className="h-4 w-4" aria-hidden />}
+                      {activeSession.paused ? "Resume" : "Pause"}
+                    </Button>
+                  </div>
+                  {activeSession.paused ? (
+                    <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                      Session paused. The timer is stopped, and nothing is saved as completed until you press Complete
+                      session.
+                    </div>
+                  ) : null}
+                  <label className="hidden cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-border accent-primary"
+                      checked={showPracticeNotes}
+                      onChange={(event) => setShowPracticeNotes(event.target.checked)}
+                    />
+                    <span className="font-medium">Add practice notes</span>
+                  </label>
+                  {showPracticeNotes ? (
+                    <Textarea
+                      className="min-h-32 resize-y bg-background text-base leading-relaxed md:hidden"
+                      value={practiceText}
+                      onChange={(event) => setPracticeText(event.target.value)}
+                      placeholder="Practice notes"
+                    />
+                  ) : null}
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="grid gap-1.5 text-sm font-medium">
+                      Anxiety after
+                      <Input type="number" min="0" max="10" value={anxietyAfter} onChange={(event) => setAnxietyAfter(Number(event.target.value))} />
+                    </label>
+                    <label className="grid gap-1.5 text-sm font-medium">
+                      Success 0-10
+                      <Input type="number" min="0" max="10" value={successRating} onChange={(event) => setSuccessRating(Number(event.target.value))} />
+                    </label>
+                  </div>
+                  <Textarea
+                    className="min-h-28"
+                    value={finishNotes}
+                    onChange={(event) => setFinishNotes(event.target.value)}
+                    placeholder="What did you resist? What did you learn?"
+                  />
+                  <Button className="h-11" onClick={completeExercise}>
+                    <ShieldCheck className="h-4 w-4" aria-hidden />
+                    Complete session
                   </Button>
                 </div>
-                {activeSession.paused ? (
-                  <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                    Session paused. The timer is stopped, and nothing is saved as completed until you press Complete session.
-                  </div>
-                ) : null}
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="grid gap-1 text-sm font-medium">
-                    Anxiety after
-                    <Input type="number" min="0" max="10" value={anxietyAfter} onChange={(event) => setAnxietyAfter(Number(event.target.value))} />
-                  </label>
-                  <label className="grid gap-1 text-sm font-medium">
-                    Success 0-10
-                    <Input type="number" min="0" max="10" value={successRating} onChange={(event) => setSuccessRating(Number(event.target.value))} />
-                  </label>
-                </div>
-                <Textarea value={finishNotes} onChange={(event) => setFinishNotes(event.target.value)} placeholder="What did you resist? What did you learn?" />
-                <Button onClick={completeExercise}>
-                  <ShieldCheck className="h-4 w-4" aria-hidden />
-                  Complete session
-                </Button>
               </div>
             </CardContent>
           </Card>
         </div>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {state.erpExercises.map((exercise) => (
-          <Card key={exercise.id} className="overflow-hidden transition hover:border-primary hover:shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle>{exercise.title}</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge>{exercise.status}</Badge>
+          <Card
+            key={exercise.id}
+            className="group overflow-hidden border-border/80 transition hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md hover:shadow-primary/10"
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <CardTitle className="line-clamp-2 leading-snug">{exercise.title}</CardTitle>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <Badge className="capitalize">{exercise.status}</Badge>
+                    <span className="rounded-full bg-muted px-2.5 py-1">Difficulty {exercise.difficulty}/10</span>
+                    <span className="rounded-full bg-muted px-2.5 py-1">
+                      {exercise.history.filter((session) => session.completedAt).length} done
+                    </span>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
                   <div className="relative">
                     <Button
                       type="button"
@@ -385,41 +496,51 @@ function ErpPageContent() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-0">
               {exercise.triggerLabel ? (
-                <div className="inline-flex max-w-full rounded-md bg-muted px-3 py-1 text-sm text-muted-foreground">
-                  Trigger practiced: <span className="ml-1 font-medium text-foreground">{exercise.triggerLabel}</span>
+                <div className="rounded-md bg-muted/80 px-3 py-2 text-sm">
+                  <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">Trigger practiced</span>
+                  <span className="mt-0.5 block font-medium text-foreground">{exercise.triggerLabel}</span>
                 </div>
               ) : null}
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>Difficulty {exercise.difficulty}/10</span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>Progress</span>
                 <span>{exercise.completion}% complete</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted">
+                  <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${exercise.completion}%` }} />
+                </div>
               </div>
-              <div className="h-2 rounded-full bg-muted">
-                <div className="h-2 rounded-full bg-primary" style={{ width: `${exercise.completion}%` }} />
-              </div>
-              <div className="rounded-md bg-muted p-3 text-sm">
-                <p className="flex items-center gap-2 font-medium">
-                  <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
-                  Response prevention
-                </p>
-                <p className="mt-1 text-muted-foreground">{exercise.responsePrevention || "No response prevention plan yet."}</p>
-              </div>
-              <label className="grid gap-2 text-sm font-medium">
-                Anxiety before
-                <Input type="number" min="0" max="10" value={anxietyBefore} onChange={(event) => setAnxietyBefore(Number(event.target.value))} />
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="secondary" onClick={() => startExercise(exercise.id, exercise.title)}>
-                  <Clock className="h-4 w-4" aria-hidden />
-                  Timer
-                </Button>
-                <Button onClick={() => startExercise(exercise.id, exercise.title)}>
+              <details className="group/details rounded-md border bg-background">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium">
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" aria-hidden />
+                    Response prevention
+                  </span>
+                  <span className="text-xs text-muted-foreground group-open/details:hidden">Show</span>
+                  <span className="hidden text-xs text-muted-foreground group-open/details:inline">Hide</span>
+                </summary>
+                <div className="border-t px-3 pb-3 pt-2 text-sm text-muted-foreground">
+                  {exercise.responsePrevention || "No response prevention plan yet."}
+                </div>
+              </details>
+              <div className="grid gap-3 rounded-md bg-muted/50 p-3">
+                <label className="grid gap-2 text-sm font-medium">
+                  Anxiety before
+                  <Input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={anxietyBefore}
+                    onChange={(event) => setAnxietyBefore(Number(event.target.value))}
+                  />
+                </label>
+                <Button className="h-11" onClick={() => startExercise(exercise.id, exercise.title)}>
                   <Play className="h-4 w-4" aria-hidden />
-                  Start
+                  Start ERP session
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">{exercise.history.filter((session) => session.completedAt).length} completed session(s)</p>
             </CardContent>
           </Card>
         ))}

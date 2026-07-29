@@ -7,7 +7,6 @@ import {
   NotebookPen,
   Settings,
   ShieldCheck,
-  User,
   Zap
 } from "lucide-react";
 
@@ -20,6 +19,5 @@ export const navItems = [
   { href: "/triggers", label: "Triggers", icon: Zap },
   { href: "/insights", label: "Insights", icon: BarChart3 },
   { href: "/journal", label: "Journal", icon: NotebookPen },
-  { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/profile", label: "Profile", icon: User }
+  { href: "/settings", label: "Settings", icon: Settings }
 ] as const;

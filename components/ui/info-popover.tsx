@@ -1,7 +1,7 @@
 "use client";
 
 import { Info, X } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 type InfoPopoverProps = {
@@ -13,22 +13,55 @@ type InfoPopoverProps = {
 
 export function InfoPopover({ label, title, children, className }: InfoPopoverProps) {
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ left: 16, top: 72 });
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLSpanElement | null>(null);
   const dialogId = useId();
 
   useEffect(() => {
     if (!open) return;
 
+    function updatePosition() {
+      const button = buttonRef.current;
+      const dialog = dialogRef.current;
+      if (!button || !dialog) return;
+
+      const gap = 8;
+      const margin = 16;
+      const buttonRect = button.getBoundingClientRect();
+      const dialogRect = dialog.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const preferredLeft = buttonRect.left;
+      const preferredTop = buttonRect.bottom + gap;
+      const left = Math.min(Math.max(margin, preferredLeft), viewportWidth - dialogRect.width - margin);
+      const fitsBelow = preferredTop + dialogRect.height <= viewportHeight - margin;
+      const top = fitsBelow ? preferredTop : Math.max(margin, buttonRect.top - dialogRect.height - gap);
+
+      setPosition({ left, top });
+    }
+
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
     }
 
+    updatePosition();
+    const frame = window.requestAnimationFrame(updatePosition);
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
   }, [open]);
 
   return (
     <span className={cn("relative inline-flex", className)}>
       <button
+        ref={buttonRef}
         type="button"
         className="grid h-8 w-8 place-items-center rounded-md border bg-card text-muted-foreground transition hover:bg-muted hover:text-foreground"
         onClick={() => setOpen((value) => !value)}
@@ -48,8 +81,10 @@ export function InfoPopover({ label, title, children, className }: InfoPopoverPr
             onClick={() => setOpen(false)}
           />
           <span
+            ref={dialogRef}
             id={dialogId}
-            className="fixed left-1/2 top-[max(4.5rem,env(safe-area-inset-top))] z-50 max-h-[min(28rem,calc(100dvh-7rem))] w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto rounded-lg border bg-card p-3 text-left text-sm font-normal text-card-foreground shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-10 sm:max-h-[min(28rem,calc(100vh-8rem))] sm:w-80 sm:translate-x-0"
+            className="fixed z-50 max-h-[min(28rem,calc(100dvh-7rem))] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto rounded-lg border bg-card p-3 text-left text-sm font-normal text-card-foreground shadow-lg sm:w-96"
+            style={{ left: position.left, top: position.top }}
             role="dialog"
             aria-label={title}
           >
