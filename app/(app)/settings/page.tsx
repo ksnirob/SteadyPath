@@ -156,122 +156,127 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <header>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <header className="max-w-3xl">
         <p className="text-sm font-medium text-muted-foreground">Account, privacy, and preferences</p>
         <h1 className="text-2xl font-semibold">Settings</h1>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <UserRound className="h-5 w-5 text-primary" aria-hidden />
-            Personal details
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-4" onSubmit={saveProfile}>
-            <label className="grid gap-2 text-sm font-medium">
-              Preferred name
-              <Input
-                value={profile.name}
-                onChange={(event) => setProfile((current) => ({ ...current, name: event.target.value }))}
-              />
-            </label>
-            <label className="grid gap-2 text-sm font-medium">
-              Email
-              <Input
-                type="email"
-                value={profile.email}
-                onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))}
-                required
-              />
-            </label>
-            <label className="grid gap-2 text-sm font-medium">
-              Local timezone
-              <select
-                className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={profile.timezone}
-                onChange={(event) => setProfile((current) => ({ ...current, timezone: event.target.value }))}
-                required
-              >
-                {timezoneOptions.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Button className="w-full sm:w-fit" disabled={isProfileSaving}>
-              <Save className="h-4 w-4" aria-hidden />
-              {isProfileSaving ? "Saving..." : "Save profile"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)]">
+        <Card className="h-fit">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserRound className="h-5 w-5 text-primary" aria-hidden />
+              Personal details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-4" onSubmit={saveProfile}>
+              <label className="grid gap-2 text-sm font-medium">
+                Preferred name
+                <Input
+                  value={profile.name}
+                  onChange={(event) => setProfile((current) => ({ ...current, name: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Email
+                <Input
+                  type="email"
+                  value={profile.email}
+                  onChange={(event) => setProfile((current) => ({ ...current, email: event.target.value }))}
+                  required
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Local timezone
+                <select
+                  className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={profile.timezone}
+                  onChange={(event) => setProfile((current) => ({ ...current, timezone: event.target.value }))}
+                  required
+                >
+                  {timezoneOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button className="w-full sm:w-fit" disabled={isProfileSaving}>
+                <Save className="h-4 w-4" aria-hidden />
+                {isProfileSaving ? "Saving..." : "Save profile"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-primary" aria-hidden />
-            Change password
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="grid gap-4" onSubmit={changePassword}>
-            <label className="grid gap-2 text-sm font-medium">
-              Current password
-              <Input
-                type="password"
-                autoComplete="current-password"
-                value={passwords.currentPassword}
-                onChange={(event) => setPasswords((current) => ({ ...current, currentPassword: event.target.value }))}
-              />
-            </label>
-            <label className="grid gap-2 text-sm font-medium">
-              New password
-              <Input
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                value={passwords.newPassword}
-                onChange={(event) => setPasswords((current) => ({ ...current, newPassword: event.target.value }))}
-                required
-              />
-            </label>
-            <label className="grid gap-2 text-sm font-medium">
-              Confirm new password
-              <Input
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                value={passwords.confirmPassword}
-                onChange={(event) => setPasswords((current) => ({ ...current, confirmPassword: event.target.value }))}
-                required
-              />
-            </label>
-            <Button className="w-full sm:w-fit" disabled={isPasswordSaving}>
-              <KeyRound className="h-4 w-4" aria-hidden />
-              {isPasswordSaving ? "Changing..." : "Change password"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        <Card className="h-fit">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" aria-hidden />
+              Change password
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form className="grid gap-4" onSubmit={changePassword}>
+              <label className="grid gap-2 text-sm font-medium">
+                Current password
+                <Input
+                  type="password"
+                  autoComplete="current-password"
+                  value={passwords.currentPassword}
+                  onChange={(event) => setPasswords((current) => ({ ...current, currentPassword: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                New password
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={passwords.newPassword}
+                  onChange={(event) => setPasswords((current) => ({ ...current, newPassword: event.target.value }))}
+                  required
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-medium">
+                Confirm new password
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={passwords.confirmPassword}
+                  onChange={(event) => setPasswords((current) => ({ ...current, confirmPassword: event.target.value }))}
+                  required
+                />
+              </label>
+              <Button className="w-full sm:w-fit" disabled={isPasswordSaving}>
+                <KeyRound className="h-4 w-4" aria-hidden />
+                {isPasswordSaving ? "Changing..." : "Change password"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </section>
 
-      <Card>
-        <CardHeader><CardTitle>Theme</CardTitle></CardHeader>
-        <CardContent className="flex gap-2">
-          <Button variant="secondary" onClick={() => setTheme("light")}><Sun className="h-4 w-4" aria-hidden />Light</Button>
-          <Button variant="secondary" onClick={() => setTheme("dark")}><Moon className="h-4 w-4" aria-hidden />Dark</Button>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader><CardTitle>Data and privacy</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          <Button variant="secondary" onClick={exportJson}>Export JSON</Button>
-          <Button variant="destructive" onClick={deleteData}>Delete local data</Button>
-        </CardContent>
-      </Card>
+      <section className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Theme</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <Button variant="secondary" onClick={() => setTheme("light")}><Sun className="h-4 w-4" aria-hidden />Light</Button>
+            <Button variant="secondary" onClick={() => setTheme("dark")}><Moon className="h-4 w-4" aria-hidden />Dark</Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Data and privacy</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2">
+            <Button variant="secondary" onClick={exportJson}>Export JSON</Button>
+            <Button variant="destructive" onClick={deleteData}>Delete local data</Button>
+          </CardContent>
+        </Card>
+      </section>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
